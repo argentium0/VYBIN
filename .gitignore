@@ -9,7 +9,7 @@
 .buildlog/
 .history
 .svn/
-*.pdf
+.pdf
 migrate_working_dir/
 
 # IntelliJ related
