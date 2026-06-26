@@ -1,0 +1,92 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+*.pdf
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# -------------------------------------------------------------------------
+# SENSITIVE DATA & CREDENTIALS (NEVER COMMIT THESE)
+# -------------------------------------------------------------------------
+.env
+.env.*
+*.secret
+*.pem
+*.pub
+*.key
+PAT_antigravity_github.txt
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+android/key.properties
+
+# -------------------------------------------------------------------------
+# ANTIGRAVITY / CURSOR / VS CODE CONFIGURATIONS
+# -------------------------------------------------------------------------
+.metadata
+.analytics
+.cursor/
+# Note: Keep .cursorrules or .agentsrules tracked if you want the agent 
+# to see them, but ignore private workspace states:
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/settings.json
+
+# -------------------------------------------------------------------------
+# FLUTTER & DART BUILD OUTPUTS
+# -------------------------------------------------------------------------
+build/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+lib/generated/
+
+# -------------------------------------------------------------------------
+# OS GENERATED FILES
+# -------------------------------------------------------------------------
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.cursorrules
+
+
