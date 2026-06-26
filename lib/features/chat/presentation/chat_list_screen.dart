@@ -34,9 +34,8 @@ class ChatListScreen extends StatefulWidget {
   State<ChatListScreen> createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _ChatListScreenState extends State<ChatListScreen> {
+  int _currentIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
@@ -73,15 +72,10 @@ class _ChatListScreenState extends State<ChatListScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {}); // Rebuilds BottomNavigationBar and FAB visibility
-    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -295,6 +289,367 @@ class _ChatListScreenState extends State<ChatListScreen>
     );
   }
 
+  Widget _buildChatsView(List<MockChat> filteredChats) {
+    if (filteredChats.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: VybinTheme.cardCharcoal,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: VybinTheme.dividerCharcoal,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 64,
+                color: VybinTheme.whatsappGreen,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No conversations found',
+              style: VybinTheme.headline1,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Search or press the plus button to start a chat',
+              style: VybinTheme.body2,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.separated(
+            itemCount: filteredChats.length,
+            separatorBuilder: (context, index) => const Divider(
+              color: VybinTheme.dividerCharcoal,
+              indent: 80,
+            ),
+            itemBuilder: (context, index) {
+              final chat = filteredChats[index];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                leading: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: VybinTheme.whatsappTeal,
+                  child: Text(
+                    chat.avatarInitials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  chat.displayName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    chat.lastMessage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      chat.time,
+                      style: TextStyle(
+                        color: chat.unreadCount > 0
+                            ? VybinTheme.whatsappGreen
+                            : VybinTheme.secondaryText,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (chat.unreadCount > 0)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: VybinTheme.whatsappGreen,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${chat.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    else if (chat.isRead)
+                      const Icon(
+                        Icons.done_all,
+                        color: VybinTheme.neonBlue,
+                        size: 16,
+                      )
+                    else
+                      const Icon(
+                        Icons.done,
+                        color: VybinTheme.secondaryText,
+                        size: 16,
+                      ),
+                  ],
+                ),
+                onTap: () {
+                  context.push(
+                    '/chat/${chat.username}',
+                    extra: {
+                      'contactName': chat.displayName,
+                      'contactAvatarInitials': chat.avatarInitials,
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsView(UserModel? currentUser) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // User Profile Header
+          Card(
+            color: VybinTheme.cardCharcoal,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: VybinTheme.whatsappTeal,
+                    child: Text(
+                      currentUser != null
+                          ? currentUser.displayName
+                                .substring(0, 2)
+                                .toUpperCase()
+                          : 'G',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currentUser != null
+                              ? currentUser.displayName
+                              : 'Guest User',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          currentUser != null
+                              ? '@${currentUser.username}'
+                              : '@guest',
+                          style: const TextStyle(
+                            color: VybinTheme.secondaryText,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentUser != null
+                              ? currentUser.about
+                              : 'Hey there! I am using VYBIN',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Encryption Keys Details Section
+          Card(
+            color: VybinTheme.cardCharcoal,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.vpn_key_outlined,
+                        color: VybinTheme.whatsappGreen,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'E2EE Cryptographic Identity',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Your generated RSA-2048 public identity key PEM block:',
+                    style: TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: VybinTheme.inputCharcoal,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    height: 120,
+                    child: SingleChildScrollView(
+                      child: Text(
+                        currentUser != null
+                            ? currentUser.publicKey
+                            : 'RSA Public Key details unavailable',
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Settings lists
+          ListTile(
+            leading: const Icon(Icons.lock_outline, color: Colors.white),
+            title: const Text(
+              'Privacy',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Blocked contacts, last seen visibility',
+              style: TextStyle(
+                color: VybinTheme.secondaryText,
+                fontSize: 12,
+              ),
+            ),
+            onTap: () {},
+          ),
+          const Divider(color: VybinTheme.dividerCharcoal),
+          ListTile(
+            leading: const Icon(
+              Icons.backup_outlined,
+              color: Colors.white,
+            ),
+            title: const Text(
+              'Chat Backup',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Local backup configuration',
+              style: TextStyle(
+                color: VybinTheme.secondaryText,
+                fontSize: 12,
+              ),
+            ),
+            onTap: () {},
+          ),
+          const Divider(color: VybinTheme.dividerCharcoal),
+          ListTile(
+            leading: const Icon(
+              Icons.notifications_active_outlined,
+              color: Colors.white,
+            ),
+            title: const Text(
+              'Notifications',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Vibration, tones, indicators',
+              style: TextStyle(
+                color: VybinTheme.secondaryText,
+                fontSize: 12,
+              ),
+            ),
+            onTap: () {},
+          ),
+          const Divider(color: VybinTheme.dividerCharcoal),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: VybinTheme.errorColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: const Text(
+              'Log Out Account',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutRequested());
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
@@ -338,20 +693,6 @@ class _ChatListScreenState extends State<ChatListScreen>
                 ),
                 onChanged: (_) => setState(() {}),
               ),
-              bottom: TabBar(
-                controller: _tabController,
-                indicatorColor: VybinTheme.whatsappGreen,
-                labelColor: VybinTheme.whatsappGreen,
-                unselectedLabelColor: VybinTheme.secondaryText,
-                indicatorWeight: 3,
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.chat_bubble_outline_outlined),
-                    text: 'CHATS',
-                  ),
-                  Tab(icon: Icon(Icons.settings_outlined), text: 'SETTINGS'),
-                ],
-              ),
             )
           : AppBar(
               title: const Text('VYBIN'),
@@ -370,7 +711,9 @@ class _ChatListScreenState extends State<ChatListScreen>
                     if (value == 'logout') {
                       context.read<AuthBloc>().add(LogoutRequested());
                     } else if (value == 'settings') {
-                      _tabController.animateTo(1);
+                      setState(() {
+                        _currentIndex = 1;
+                      });
                     }
                   },
                   itemBuilder: (BuildContext context) {
@@ -393,20 +736,6 @@ class _ChatListScreenState extends State<ChatListScreen>
                   },
                 ),
               ],
-              bottom: TabBar(
-                controller: _tabController,
-                indicatorColor: VybinTheme.whatsappGreen,
-                labelColor: VybinTheme.whatsappGreen,
-                unselectedLabelColor: VybinTheme.secondaryText,
-                indicatorWeight: 3,
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.chat_bubble_outline_outlined),
-                    text: 'CHATS',
-                  ),
-                  Tab(icon: Icon(Icons.settings_outlined), text: 'SETTINGS'),
-                ],
-              ),
             ),
       drawer: Drawer(
         backgroundColor: VybinTheme.darkCharcoal,
@@ -457,7 +786,9 @@ class _ChatListScreenState extends State<ChatListScreen>
               ),
               onTap: () {
                 Navigator.pop(context);
-                _tabController.animateTo(1);
+                setState(() {
+                  _currentIndex = 1;
+                });
               },
             ),
             ListTile(
@@ -468,7 +799,9 @@ class _ChatListScreenState extends State<ChatListScreen>
               ),
               onTap: () {
                 Navigator.pop(context);
-                _tabController.animateTo(1);
+                setState(() {
+                  _currentIndex = 1;
+                });
               },
             ),
             const Divider(color: VybinTheme.dividerCharcoal),
@@ -486,373 +819,30 @@ class _ChatListScreenState extends State<ChatListScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          // View 1: Chats Conversations list (Spec 9.4)
-          filteredChats.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: VybinTheme.cardCharcoal,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: VybinTheme.dividerCharcoal,
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 64,
-                          color: VybinTheme.whatsappGreen,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'No conversations found',
-                        style: VybinTheme.headline1,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Search or press the plus button to start a chat',
-                        style: VybinTheme.body2,
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  itemCount: filteredChats.length,
-                  separatorBuilder: (context, index) => const Divider(
-                    color: VybinTheme.dividerCharcoal,
-                    indent: 80,
-                  ),
-                  itemBuilder: (context, index) {
-                    final chat = filteredChats[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      leading: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: VybinTheme.whatsappTeal,
-                        child: Text(
-                          chat.avatarInitials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        chat.displayName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          chat.lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: VybinTheme.secondaryText,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            chat.time,
-                            style: TextStyle(
-                              color: chat.unreadCount > 0
-                                  ? VybinTheme.whatsappGreen
-                                  : VybinTheme.secondaryText,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (chat.unreadCount > 0)
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: VybinTheme.whatsappGreen,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '${chat.unreadCount}',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          else if (chat.isRead)
-                            const Icon(
-                              Icons.done_all,
-                              color: VybinTheme.neonBlue,
-                              size: 16,
-                            )
-                          else
-                            const Icon(
-                              Icons.done,
-                              color: VybinTheme.secondaryText,
-                              size: 16,
-                            ),
-                        ],
-                      ),
-                      onTap: () {
-                        context.push(
-                          '/chat/${chat.username}',
-                          extra: {
-                            'contactName': chat.displayName,
-                            'contactAvatarInitials': chat.avatarInitials,
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-
-          // View 2: User Settings / Profile panel (Spec 9.8)
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // User Profile Header
-                Card(
-                  color: VybinTheme.cardCharcoal,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundColor: VybinTheme.whatsappTeal,
-                          child: Text(
-                            currentUser != null
-                                ? currentUser.displayName
-                                      .substring(0, 2)
-                                      .toUpperCase()
-                                : 'G',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                currentUser != null
-                                    ? currentUser.displayName
-                                    : 'Guest User',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                currentUser != null
-                                    ? '@${currentUser.username}'
-                                    : '@guest',
-                                style: const TextStyle(
-                                  color: VybinTheme.secondaryText,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                currentUser != null
-                                    ? currentUser.about
-                                    : 'Hey there! I am using VYBIN',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Encryption Keys Details Section
-                Card(
-                  color: VybinTheme.cardCharcoal,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.vpn_key_outlined,
-                              color: VybinTheme.whatsappGreen,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'E2EE Cryptographic Identity',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Your generated RSA-2048 public identity key PEM block:',
-                          style: TextStyle(
-                            color: VybinTheme.secondaryText,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: VybinTheme.inputCharcoal,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          height: 120,
-                          child: SingleChildScrollView(
-                            child: Text(
-                              currentUser != null
-                                  ? currentUser.publicKey
-                                  : 'RSA Public Key details unavailable',
-                              style: const TextStyle(
-                                color: Colors.greenAccent,
-                                fontSize: 10,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Settings lists
-                ListTile(
-                  leading: const Icon(Icons.lock_outline, color: Colors.white),
-                  title: const Text(
-                    'Privacy',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: const Text(
-                    'Blocked contacts, last seen visibility',
-                    style: TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onTap: () {},
-                ),
-                const Divider(color: VybinTheme.dividerCharcoal),
-                ListTile(
-                  leading: const Icon(
-                    Icons.backup_outlined,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Chat Backup',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: const Text(
-                    'Local backup configuration',
-                    style: TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onTap: () {},
-                ),
-                const Divider(color: VybinTheme.dividerCharcoal),
-                ListTile(
-                  leading: const Icon(
-                    Icons.notifications_active_outlined,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Notifications',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: const Text(
-                    'Vibration, tones, indicators',
-                    style: TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onTap: () {},
-                ),
-                const Divider(color: VybinTheme.dividerCharcoal),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: VybinTheme.errorColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text(
-                    'Log Out Account',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () {
-                    context.read<AuthBloc>().add(LogoutRequested());
-                  },
-                ),
-              ],
-            ),
+          Expanded(
+            child: _currentIndex == 0
+                ? _buildChatsView(filteredChats)
+                : _buildSettingsView(currentUser),
           ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _tabController.index,
+        currentIndex: _currentIndex,
         onTap: (index) {
-          _tabController.animateTo(index);
+          setState(() {
+            _currentIndex = index;
+          });
         },
-        selectedItemColor: VybinTheme.whatsappGreen,
-        unselectedItemColor: VybinTheme.secondaryText,
-        backgroundColor: VybinTheme.cardCharcoal,
+        selectedItemColor: const Color(0xFF00FFCC), // Premium neon green
+        unselectedItemColor: Colors.grey,           // Muted gray
+        backgroundColor: const Color(0xFF121212),    // Charcoal background
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+            activeIcon: Icon(Icons.chat),
             label: 'Chats',
           ),
           BottomNavigationBarItem(
@@ -862,7 +852,7 @@ class _ChatListScreenState extends State<ChatListScreen>
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 0
+      floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
               backgroundColor: VybinTheme.whatsappGreen,
               foregroundColor: Colors.white,
