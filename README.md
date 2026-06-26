@@ -2,10 +2,10 @@
 
 VYBIN is an offline-first, decentralized, and end-to-end encrypted (E2EE) messaging application built with Flutter. It combines the familiar, responsive UI/UX of WhatsApp with a privacy-first cryptographic backend where no plaintext message ever leaves your device.
 
-<img width="622" height="792" alt="image" src="https://github.com/user-attachments/assets/249e7c16-1c22-4e60-949b-e6a4d7698aa7" />
-<img width="617" height="883" alt="image" src="https://github.com/user-attachments/assets/8aa7246c-4f55-4b36-b692-8eebbd39b0d8" />
-<img width="617" height="805" alt="image" src="https://github.com/user-attachments/assets/e241137b-a2de-4fd4-a6be-16fd402401fc" />
-<img width="611" height="880" alt="image" src="https://github.com/user-attachments/assets/5ac81570-a89b-43eb-8200-4aeeae8dcee5" />
+<img width="170" height="400" alt="image" src="https://github.com/user-attachments/assets/249e7c16-1c22-4e60-949b-e6a4d7698aa7" />
+<img width="170" height="400" alt="image" src="https://github.com/user-attachments/assets/8aa7246c-4f55-4b36-b692-8eebbd39b0d8" />
+<img width="170" height="400" alt="image" src="https://github.com/user-attachments/assets/e241137b-a2de-4fd4-a6be-16fd402401fc" />
+<img width="170" height="400" alt="image" src="https://github.com/user-attachments/assets/5ac81570-a89b-43eb-8200-4aeeae8dcee5" />
 
 
 ---
