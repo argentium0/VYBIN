@@ -67,11 +67,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
           children: [
             // Top-right corner Skip button (hidden on the final slide)
             SizedBox(
-              height: 60,
+              height: 48,
               child: Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0, right: 16.0),
+                  padding: const EdgeInsets.only(top: 4.0, right: 16.0),
                   child: _currentPage < 2
                       ? TextButton(
                           onPressed: () => completeOnboarding(context),
@@ -106,10 +106,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
                           // Visual element based on the current slide
                           _buildSlideVisual(index),
-                          const SizedBox(height: 60),
+                          const SizedBox(height: 32),
 
                           // Slide Title
                           Text(
@@ -117,25 +117,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                             style: TextStyle(
                               fontFamily: 'System',
                               fontWeight: FontWeight.w900,
-                              fontSize: 26.0,
+                              fontSize: 24.0,
                               letterSpacing: 1.2,
                               color: textColor,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 12),
 
                           // Slide Subtitle
                           Text(
                             _getSlideSubtitle(index),
                             style: TextStyle(
                               color: secondaryTextColor,
-                              fontSize: 15.5,
-                              height: 1.5,
+                              fontSize: 15.0,
+                              height: 1.4,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
                         ],
                       ),
                     ),
@@ -146,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
 
             // Bottom Row: Dots indicators and button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -248,20 +248,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         animation: _animationController,
         builder: (context, child) {
           return Container(
-            width: 180,
-            height: 180,
+            width: 140,
+            height: 140,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: VybinTheme.whatsappGreen.withOpacity(0.05),
               border: Border.all(
                 color: VybinTheme.whatsappGreen.withOpacity(0.1 + 0.2 * _animationController.value),
-                width: 2 + 3 * _animationController.value,
+                width: 2 + 2 * _animationController.value,
               ),
             ),
             alignment: Alignment.center,
             child: Icon(
               Icons.lock_person,
-              size: 90 + 5 * _animationController.value,
+              size: 70 + 5 * _animationController.value,
               color: VybinTheme.whatsappGreen,
             ),
           );
@@ -273,25 +273,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         animation: _animationController,
         builder: (context, child) {
           return Container(
-            width: 180,
-            height: 180,
+            width: 140,
+            height: 140,
             alignment: Alignment.center,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 Transform.translate(
-                  offset: Offset(-20 + 5 * _animationController.value, -15),
+                  offset: Offset(-14 + 4 * _animationController.value, -10),
                   child: const Icon(
                     Icons.chat_bubble_outline_rounded,
-                    size: 80,
+                    size: 60,
                     color: VybinTheme.whatsappGreen,
                   ),
                 ),
                 Transform.translate(
-                  offset: Offset(20 - 5 * _animationController.value, 15),
+                  offset: Offset(14 - 4 * _animationController.value, 10),
                   child: Icon(
                     Icons.enhanced_encryption,
-                    size: 85,
+                    size: 64,
                     color: VybinTheme.whatsappGreen.withOpacity(0.85),
                   ),
                 ),
@@ -303,15 +303,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
     } else {
       // Slide 3: Circular transparent logo.png alongside a neon rocket indicator or glowing verification badge
       return Container(
-        width: 180,
-        height: 180,
+        width: 140,
+        height: 140,
         alignment: Alignment.center,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 76.0,
-              height: 76.0,
+              width: 60.0,
+              height: 60.0,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
               ),
@@ -322,21 +322,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                 errorBuilder: (context, error, stackTrace) {
                   return const Icon(
                     Icons.chat_bubble,
-                    size: 76,
+                    size: 60,
                     color: VybinTheme.whatsappGreen,
                   );
                 },
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             AnimatedBuilder(
               animation: _animationController,
               builder: (context, child) {
                 return Transform.translate(
-                  offset: Offset(0, -10 * _animationController.value),
+                  offset: Offset(0, -8 * _animationController.value),
                   child: Icon(
                     Icons.rocket_launch,
-                    size: 70,
+                    size: 56,
                     color: Colors.orangeAccent.withOpacity(0.8 + 0.2 * _animationController.value),
                   ),
                 );
