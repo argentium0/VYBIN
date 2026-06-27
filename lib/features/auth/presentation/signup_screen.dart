@@ -340,15 +340,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
               barrierDismissible: false,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: VybinTheme.cardCharcoal,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: const Row(
+                  title: Row(
                     children: [
-                      Icon(Icons.vpn_key_outlined, color: VybinTheme.whatsappGreen),
-                      SizedBox(width: 8),
+                      const Icon(Icons.vpn_key_outlined, color: VybinTheme.whatsappGreen),
+                      const SizedBox(width: 8),
                       Text(
                         'Account Created 🔑',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -358,14 +361,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       Text(
                         'Welcome to VYBIN, ${state.user.displayName}!',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'A cryptographically secure RSA-2048 public/private keypair has been generated on your device. '
                         'Your private key is encrypted and stored locally in your keystore, while your public key has been registered on the server.\n\n'
                         'Your communications are fully end-to-end encrypted.',
-                        style: TextStyle(color: VybinTheme.primaryText, fontSize: 14),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -439,7 +449,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     TextFormField(
                       controller: _displayNameController,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         hintText: 'Display Name',
                         prefixIcon: Icon(Icons.badge_outlined, color: VybinTheme.secondaryText),
@@ -453,13 +463,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       controller: _usernameController,
                       focusNode: _usernameFocusNode,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Username',
                         prefixIcon: const Icon(Icons.alternate_email_outlined, color: VybinTheme.secondaryText),
                         prefixText: '@ ',
-                        prefixStyle: const TextStyle(
-                          color: Colors.white,
+                        prefixStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -509,7 +519,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         hintText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined, color: VybinTheme.secondaryText),
@@ -523,7 +533,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),
@@ -550,7 +560,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Confirm Password',
                         prefixIcon: const Icon(Icons.lock_reset_outlined, color: VybinTheme.secondaryText),

@@ -144,7 +144,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           decoration: BoxDecoration(
-            color: VybinTheme.cardCharcoal,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -288,7 +288,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
         margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? VybinTheme.sentBubbleColor : VybinTheme.receivedBubbleColor,
+          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(8),
             topRight: const Radius.circular(8),
@@ -320,7 +320,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
-          color: isMe ? VybinTheme.sentBubbleColor : VybinTheme.receivedBubbleColor,
+          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -376,15 +376,19 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                       Text(
                         durationText,
                         style: VybinTheme.caption.copyWith(
-                          color: isMe ? Colors.white70 : VybinTheme.secondaryText,
-                          fontSize: 10,
+                          color: isMe 
+                              ? (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
+                              : VybinTheme.secondaryText,
                         ),
                       ),
-                      Icon(
-                        Icons.mic,
-                        size: 12,
-                        color: isMe ? Colors.white70 : VybinTheme.secondaryText,
-                      ),
+                      if (isMe)
+                        Icon(
+                          Icons.done_all,
+                          color: isMe 
+                              ? (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
+                              : VybinTheme.secondaryText,
+                          size: 16,
+                        ),
                     ],
                   ),
                 ],
@@ -399,13 +403,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
   Widget _buildInputZone() {
     return Container(
       padding: const EdgeInsets.all(8),
-      color: VybinTheme.darkCharcoal,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Row(
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: VybinTheme.inputCharcoal,
+                color: Theme.of(context).inputDecorationTheme.fillColor,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: ClipRRect(
@@ -452,7 +456,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                       top: 0,
                       bottom: 0,
                       child: Container(
-                        color: VybinTheme.inputCharcoal,
+                        color: Theme.of(context).inputDecorationTheme.fillColor,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
@@ -460,8 +464,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                             const SizedBox(width: 12),
                             Text(
                               _formatDuration(_recordingDuration),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),

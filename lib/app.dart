@@ -8,6 +8,8 @@ import 'package:vybin/shared/theme/vybin_theme.dart';
 class VybinApp extends StatefulWidget {
   const VybinApp({super.key});
 
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
+
   @override
   State<VybinApp> createState() => _VybinAppState();
 }
@@ -25,11 +27,18 @@ class _VybinAppState extends State<VybinApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'VYBIN',
-      theme: VybinTheme.darkTheme,
-      routerConfig: _router,
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: VybinApp.themeNotifier,
+      builder: (context, currentMode, _) {
+        return MaterialApp.router(
+          title: 'VYBIN',
+          theme: VybinTheme.lightTheme,
+          darkTheme: VybinTheme.darkTheme,
+          themeMode: currentMode,
+          routerConfig: _router,
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

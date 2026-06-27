@@ -66,19 +66,22 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: VybinTheme.cardCharcoal,
-          title: const Row(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: VybinTheme.errorColor),
-              SizedBox(width: 8),
-              Text('Reset Password', style: TextStyle(color: Colors.white)),
+              const Icon(Icons.warning_amber_rounded, color: VybinTheme.errorColor),
+              const SizedBox(width: 8),
+              Text(
+                'Reset Password',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              ),
             ],
           ),
-          content: const Text(
+          content: Text(
             '⚠️ Resetting your password will make your existing chat history permanently unreadable, '
             'because your messages are encrypted with a key derived from your password.\n\n'
             'Only proceed if you are okay with losing access to previous conversations.',
-            style: TextStyle(color: VybinTheme.primaryText),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85)),
           ),
           actions: [
             TextButton(
@@ -136,15 +139,18 @@ class _LoginScreenState extends State<LoginScreen> {
               barrierDismissible: false,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: VybinTheme.cardCharcoal,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: const Row(
+                  title: Row(
                     children: [
-                      Icon(Icons.verified_user_outlined, color: VybinTheme.whatsappGreen),
-                      SizedBox(width: 8),
+                      const Icon(Icons.verified_user_outlined, color: VybinTheme.whatsappGreen),
+                      const SizedBox(width: 8),
                       Text(
                         'Access Granted',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -154,13 +160,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         'Welcome back, ${state.user.displayName}!',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'Secure local keys storage has been initialized, and your RSA-2048 identity keypair has been verified.\n\n'
                         'All chat sessions in VYBIN are secured with peer-to-peer end-to-end encryption.',
-                        style: TextStyle(color: VybinTheme.primaryText, fontSize: 14),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -199,23 +212,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble,
-                                color: VybinTheme.whatsappTeal,
-                                size: 90,
-                              ),
-                              Padding(
-                                padding: EdgeInsets.only(bottom: 10.0),
-                                child: Icon(
-                                  Icons.lock,
-                                  color: Colors.white,
-                                  size: 36,
-                                ),
-                              ),
-                            ],
+                          Image.asset(
+                            'assets/images/logo.png',
+                            height: 90,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.chat_bubble,
+                                    color: VybinTheme.whatsappTeal,
+                                    size: 90,
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.only(bottom: 10.0),
+                                    child: Icon(
+                                      Icons.lock,
+                                      color: Colors.white,
+                                      size: 36,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -240,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         hintText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined, color: VybinTheme.secondaryText),
@@ -253,7 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       enabled: !isLoading,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),

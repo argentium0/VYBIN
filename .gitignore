@@ -57,6 +57,8 @@ PAT_antigravity_github.txt
 ios/Flutter/App.framework
 ios/Flutter/Flutter.framework
 android/key.properties
+VYBIN_MVP_Spec.md
+WhatsUp_MVP_Spec.md
 
 # -------------------------------------------------------------------------
 # ANTIGRAVITY / CURSOR / VS CODE CONFIGURATIONS

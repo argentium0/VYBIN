@@ -38,23 +38,30 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Logo: Lock icon inside a chat bubble (Spec 9.1)
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.chat_bubble,
-                    color: VybinTheme.whatsappDarkTeal,
-                    size: 110,
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12.0), // offset for the chat bubble tail
-                    child: Icon(
-                      Icons.lock,
-                      color: Colors.white,
-                      size: 45,
-                    ),
-                  ),
-                ],
+              Image.asset(
+                'assets/images/logo.png',
+                height: 110,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.chat_bubble,
+                        color: VybinTheme.whatsappDarkTeal,
+                        size: 110,
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 12.0), // offset for the chat bubble tail
+                        child: Icon(
+                          Icons.lock,
+                          color: Colors.white,
+                          size: 45,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
               // App Title

@@ -6,6 +6,7 @@ import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 import 'package:vybin/shared/models/user_model.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vybin/app.dart';
 
 class MockChat {
   final String displayName;
@@ -298,10 +299,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: VybinTheme.cardCharcoal,
+                color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: VybinTheme.dividerCharcoal,
+                  color: Theme.of(context).dividerTheme.color ?? VybinTheme.dividerCharcoal,
                   width: 2,
                 ),
               ),
@@ -356,8 +357,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
                 title: Text(
                   chat.displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -443,7 +444,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         children: [
           // User Profile Header
           Card(
-            color: VybinTheme.cardCharcoal,
+            color: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -476,8 +477,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           currentUser != null
                               ? currentUser.displayName
                               : 'Guest User',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -497,8 +498,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           currentUser != null
                               ? currentUser.about
                               : 'Hey there! I am using VYBIN',
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 13,
                             fontStyle: FontStyle.italic,
                           ),
@@ -514,7 +515,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
           // Encryption Keys Details Section
           Card(
-            color: VybinTheme.cardCharcoal,
+            color: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -523,17 +524,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.vpn_key_outlined,
                         color: VybinTheme.whatsappGreen,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'E2EE Cryptographic Identity',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -552,7 +553,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: VybinTheme.inputCharcoal,
+                      color: Theme.of(context).inputDecorationTheme.fillColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     height: 120,
@@ -577,10 +578,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
           // Settings lists
           ListTile(
-            leading: const Icon(Icons.lock_outline, color: Colors.white),
-            title: const Text(
+            leading: Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.onSurface),
+            title: Text(
               'Privacy',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: const Text(
               'Blocked contacts, last seen visibility',
@@ -591,15 +592,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             onTap: () {},
           ),
-          const Divider(color: VybinTheme.dividerCharcoal),
+          const Divider(),
           ListTile(
-            leading: const Icon(
+            leading: Icon(
               Icons.backup_outlined,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-            title: const Text(
+            title: Text(
               'Chat Backup',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: const Text(
               'Local backup configuration',
@@ -610,15 +611,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             onTap: () {},
           ),
-          const Divider(color: VybinTheme.dividerCharcoal),
+          const Divider(),
           ListTile(
-            leading: const Icon(
+            leading: Icon(
               Icons.notifications_active_outlined,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-            title: const Text(
+            title: Text(
               'Notifications',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: const Text(
               'Vibration, tones, indicators',
@@ -629,7 +630,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             onTap: () {},
           ),
-          const Divider(color: VybinTheme.dividerCharcoal),
+          const Divider(),
+
+          // Dark Mode Toggle Switch Tile
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: VybinApp.themeNotifier,
+            builder: (context, currentMode, _) {
+              return ListTile(
+                leading: Icon(
+                  currentMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                title: Text(
+                  'Dark Mode',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                ),
+                subtitle: const Text(
+                  'Toggle between light and dark themes',
+                  style: TextStyle(
+                    color: VybinTheme.secondaryText,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: Switch(
+                  value: currentMode == ThemeMode.dark,
+                  activeColor: VybinTheme.whatsappGreen,
+                  onChanged: (bool value) {
+                    VybinApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                  },
+                ),
+              );
+            },
+          ),
+          const Divider(),
           const SizedBox(height: 16),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -667,7 +700,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: VybinTheme.darkCharcoal,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _isSearching
           ? AppBar(
               leading: IconButton(
@@ -682,10 +715,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
               title: TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   hintText: 'Search conversations...',
-                  hintStyle: TextStyle(color: Colors.white54),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -695,7 +728,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
             )
           : AppBar(
-              title: const Text('VYBIN'),
+              centerTitle: false,
+              title: Image.asset(
+                'assets/images/logo.png',
+                height: 28,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Text('VYBIN');
+                },
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search),
@@ -718,11 +760,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   },
                   itemBuilder: (BuildContext context) {
                     return [
-                      const PopupMenuItem<String>(
+                      PopupMenuItem<String>(
                         value: 'settings',
                         child: Text(
                           'Settings',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         ),
                       ),
                       const PopupMenuItem<String>(
@@ -738,7 +780,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ],
             ),
       drawer: Drawer(
-        backgroundColor: VybinTheme.darkCharcoal,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -747,7 +789,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: VybinTheme.whatsappDarkTeal,
               ),
               currentAccountPicture: CircleAvatar(
-                backgroundColor: VybinTheme.cardCharcoal,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 child: Text(
                   currentUser != null
                       ? currentUser.displayName.substring(0, 2).toUpperCase()
@@ -776,9 +818,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Icons.security,
                 color: VybinTheme.whatsappGreen,
               ),
-              title: const Text(
+              title: Text(
                 'E2EE Keys Setup',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               subtitle: const Text(
                 'RSA-2048 Identity Cryptography Active',
@@ -792,10 +834,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.settings, color: Colors.white),
-              title: const Text(
+              leading: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
+              title: Text(
                 'Dashboard Preferences',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -804,7 +846,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 });
               },
             ),
-            const Divider(color: VybinTheme.dividerCharcoal),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: VybinTheme.errorColor),
               title: const Text(
@@ -835,9 +877,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: const Color(0xFF00FFCC), // Premium neon green
-        unselectedItemColor: Colors.grey,           // Muted gray
-        backgroundColor: const Color(0xFF121212),    // Charcoal background
+        selectedItemColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF00FFCC) : VybinTheme.whatsappTeal,
+        unselectedItemColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey : Colors.grey[600],
+        backgroundColor: Theme.of(context).colorScheme.surface,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
