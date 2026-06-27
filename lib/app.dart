@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
+import 'package:vybin/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:vybin/shared/router/app_router.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 
 class VybinApp extends StatefulWidget {
-  const VybinApp({super.key});
+  final bool isFirstLaunch;
+  const VybinApp({super.key, this.isFirstLaunch = false});
 
   static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
+  static final ValueNotifier<bool> onboardingCompleteNotifier = ValueNotifier(false);
 
   @override
   State<VybinApp> createState() => _VybinAppState();
@@ -20,6 +23,7 @@ class _VybinAppState extends State<VybinApp> {
   @override
   void initState() {
     super.initState();
+    VybinApp.onboardingCompleteNotifier.value = !widget.isFirstLaunch;
     // Retrieve AuthBloc and create the state-aware central router
     final authBloc = context.read<AuthBloc>();
     _router = AppRouter.createRouter(authBloc);
@@ -30,13 +34,29 @@ class _VybinAppState extends State<VybinApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: VybinApp.themeNotifier,
       builder: (context, currentMode, _) {
-        return MaterialApp.router(
-          title: 'VYBIN',
-          theme: VybinTheme.lightTheme,
-          darkTheme: VybinTheme.darkTheme,
-          themeMode: currentMode,
-          routerConfig: _router,
-          debugShowCheckedModeBanner: false,
+        return ValueListenableBuilder<bool>(
+          valueListenable: VybinApp.onboardingCompleteNotifier,
+          builder: (context, isComplete, _) {
+            if (!isComplete) {
+              return MaterialApp(
+                title: 'VYBIN',
+                theme: VybinTheme.lightTheme,
+                darkTheme: VybinTheme.darkTheme,
+                themeMode: currentMode,
+                home: const OnboardingScreen(),
+                debugShowCheckedModeBanner: false,
+              );
+            } else {
+              return MaterialApp.router(
+                title: 'VYBIN',
+                theme: VybinTheme.lightTheme,
+                darkTheme: VybinTheme.darkTheme,
+                themeMode: currentMode,
+                routerConfig: _router,
+                debugShowCheckedModeBanner: false,
+              );
+            }
+          },
         );
       },
     );
