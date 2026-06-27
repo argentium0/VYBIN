@@ -5,6 +5,7 @@ VYBIN is an offline-first, decentralized, and end-to-end encrypted (E2EE) messag
 <img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/25e21368-4324-4a67-bef9-c735a7fd84b3" />
 <img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/11db5d0e-d893-4f10-8d3c-a8fc06c36959" />
 <img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/990b0ce2-4fbd-415d-8c50-6c9d49d5588b" />
+<img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/389a1955-6c27-40d2-8cc7-6e75cbb31f80" />
 
 
 
