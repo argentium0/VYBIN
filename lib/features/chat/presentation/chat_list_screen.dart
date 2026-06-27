@@ -373,6 +373,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                 ),
                 trailing: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -385,7 +386,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         fontSize: 12,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     if (chat.unreadCount > 0)
                       Container(
                         padding: const EdgeInsets.all(6),
