@@ -748,7 +748,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     decoration: const BoxDecoration(shape: BoxShape.circle),
                     clipBehavior: Clip.hardEdge,
                     child: Image.asset(
-                      'assets/images/logo.png',
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 'assets/images/logo_dark.png'
+                          : 'assets/images/logo.png',
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const SizedBox.shrink();

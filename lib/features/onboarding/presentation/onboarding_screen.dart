@@ -317,7 +317,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               ),
               clipBehavior: Clip.hardEdge,
               child: Image.asset(
-                'assets/images/logo.png',
+                'assets/images/logo_dark.png',
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return const Icon(

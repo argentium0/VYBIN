@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _obscurePassword = true;
 
   @override
@@ -69,11 +69,16 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: VybinTheme.errorColor),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: VybinTheme.errorColor,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Reset Password',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -81,11 +86,16 @@ class _LoginScreenState extends State<LoginScreen> {
             '⚠️ Resetting your password will make your existing chat history permanently unreadable, '
             'because your messages are encrypted with a key derived from your password.\n\n'
             'Only proceed if you are okay with losing access to previous conversations.',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85)),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+            ),
           ),
           actions: [
             TextButton(
-              child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: VybinTheme.secondaryText),
+              ),
               onPressed: () => Navigator.of(context).pop(),
             ),
             ElevatedButton(
@@ -98,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Password reset email simulated successfully.'),
+                    content: Text(
+                      'Password reset email simulated successfully.',
+                    ),
                     backgroundColor: VybinTheme.neonHighlight,
                   ),
                 );
@@ -129,7 +141,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 backgroundColor: VybinTheme.errorColor,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           } else if (state is AuthAuthenticated) {
@@ -140,10 +154,15 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (BuildContext context) {
                 return AlertDialog(
                   backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   title: Row(
                     children: [
-                      const Icon(Icons.verified_user_outlined, color: VybinTheme.whatsappGreen),
+                      const Icon(
+                        Icons.verified_user_outlined,
+                        color: VybinTheme.whatsappGreen,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Access Granted',
@@ -171,7 +190,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         'Secure local keys storage has been initialized, and your RSA-2048 identity keypair has been verified.\n\n'
                         'All chat sessions in VYBIN are secured with peer-to-peer end-to-end encryption.',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.85),
                           fontSize: 14,
                         ),
                       ),
@@ -182,7 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: VybinTheme.whatsappGreen,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Enter VYBIN'),
                       onPressed: () {
@@ -201,7 +224,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
           return SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -213,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         children: [
                           Image.asset(
-                            'assets/images/logo.png',
+                            'assets/images/logo_dark.png',
                             height: 90,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
@@ -260,10 +286,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: const InputDecoration(
                         hintText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                       ),
                       validator: _validateEmail,
                     ),
@@ -273,13 +304,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {

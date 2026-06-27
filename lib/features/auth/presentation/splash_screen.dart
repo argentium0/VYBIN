@@ -39,7 +39,9 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               // Logo: Lock icon inside a chat bubble (Spec 9.1)
               Image.asset(
-                'assets/images/logo.png',
+                Theme.of(context).brightness == Brightness.dark
+                    ? 'assets/images/logo_dark.png'
+                    : 'assets/images/logo.png',
                 height: 110,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
