@@ -57,7 +57,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       time: 'Yesterday',
       unreadCount: 0,
       isRead: true,
-      avatarInitials: 'BD',
+      avatarInitials: 'BR',
     ),
     MockChat(
       displayName: 'Hanzala Abid',
@@ -66,7 +66,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       time: '2 days ago',
       unreadCount: 0,
       isRead: false,
-      avatarInitials: 'CB',
+      avatarInitials: 'HA',
     ),
   ];
 
@@ -302,7 +302,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Theme.of(context).dividerTheme.color ?? VybinTheme.dividerCharcoal,
+                  color:
+                      Theme.of(context).dividerTheme.color ??
+                      VybinTheme.dividerCharcoal,
                   width: 2,
                 ),
               ),
@@ -313,10 +315,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'No conversations found',
-              style: VybinTheme.headline1,
-            ),
+            const Text('No conversations found', style: VybinTheme.headline1),
             const SizedBox(height: 8),
             const Text(
               'Search or press the plus button to start a chat',
@@ -332,10 +331,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
         Expanded(
           child: ListView.separated(
             itemCount: filteredChats.length,
-            separatorBuilder: (context, index) => const Divider(
-              color: VybinTheme.dividerCharcoal,
-              indent: 80,
-            ),
+            separatorBuilder: (context, index) =>
+                const Divider(color: VybinTheme.dividerCharcoal, indent: 80),
             itemBuilder: (context, index) {
               final chat = filteredChats[index];
               return ListTile(
@@ -499,7 +496,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? currentUser.about
                               : 'Hey there! I am using VYBIN',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 13,
                             fontStyle: FontStyle.italic,
                           ),
@@ -553,7 +552,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).inputDecorationTheme.fillColor,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[800]
+                          : Colors.grey[200],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     height: 120,
@@ -562,8 +563,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         currentUser != null
                             ? currentUser.publicKey
                             : 'RSA Public Key details unavailable',
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.greenAccent
+                              : Colors.green[900],
                           fontSize: 10,
                           fontFamily: 'monospace',
                         ),
@@ -578,17 +581,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
           // Settings lists
           ListTile(
-            leading: Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.onSurface),
+            leading: Icon(
+              Icons.lock_outline,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             title: Text(
               'Privacy',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: const Text(
               'Blocked contacts, last seen visibility',
-              style: TextStyle(
-                color: VybinTheme.secondaryText,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
             ),
             onTap: () {},
           ),
@@ -604,10 +607,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             subtitle: const Text(
               'Local backup configuration',
-              style: TextStyle(
-                color: VybinTheme.secondaryText,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
             ),
             onTap: () {},
           ),
@@ -623,10 +623,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             subtitle: const Text(
               'Vibration, tones, indicators',
-              style: TextStyle(
-                color: VybinTheme.secondaryText,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
             ),
             onTap: () {},
           ),
@@ -638,12 +635,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
             builder: (context, currentMode, _) {
               return ListTile(
                 leading: Icon(
-                  currentMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                  currentMode == ThemeMode.dark
+                      ? Icons.dark_mode
+                      : Icons.light_mode,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 title: Text(
                   'Dark Mode',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: const Text(
                   'Toggle between light and dark themes',
@@ -656,7 +657,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   value: currentMode == ThemeMode.dark,
                   activeColor: VybinTheme.whatsappGreen,
                   onChanged: (bool value) {
-                    VybinApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                    VybinApp.themeNotifier.value = value
+                        ? ThemeMode.dark
+                        : ThemeMode.light;
                   },
                 ),
               );
@@ -715,10 +718,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
               title: TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search conversations...',
-                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                  hintStyle: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -729,14 +738,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
             )
           : AppBar(
               centerTitle: false,
-              title: Image.asset(
-                'assets/images/logo.png',
-                height: 28,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Text('VYBIN');
-                },
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 32.0,
+                    height: 32.0,
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
+                    clipBehavior: Clip.hardEdge,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'VYBIN',
+                    style: TextStyle(
+                      fontFamily: 'System',
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24.0,
+                      letterSpacing: 1.5,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF075E54),
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 IconButton(
@@ -764,7 +796,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         value: 'settings',
                         child: Text(
                           'Settings',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
                       const PopupMenuItem<String>(
@@ -820,7 +854,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               title: Text(
                 'E2EE Keys Setup',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               subtitle: const Text(
                 'RSA-2048 Identity Cryptography Active',
@@ -834,10 +870,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
+              leading: Icon(
+                Icons.settings,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               title: Text(
                 'Dashboard Preferences',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -877,8 +918,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF00FFCC) : VybinTheme.whatsappTeal,
-        unselectedItemColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey : Colors.grey[600],
+        selectedItemColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF00FFCC)
+            : VybinTheme.whatsappTeal,
+        unselectedItemColor: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey
+            : Colors.grey[600],
         backgroundColor: Theme.of(context).colorScheme.surface,
         type: BottomNavigationBarType.fixed,
         items: const [

@@ -40,8 +40,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // Mock successful user profile setup
     final mockUser = UserModel(
       uid: 'mock_uid_123',
-      username: 'abdurrehman1',
-      displayName: 'Mani KHan',
+      username: 'abdullah123',
+      displayName: 'Abdullah Naseer',
       email: event.email,
       profilePhotoUrl: null,
       publicKey:
