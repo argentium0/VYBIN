@@ -386,7 +386,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         fontSize: 12,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     if (chat.unreadCount > 0)
                       Container(
                         padding: const EdgeInsets.all(6),
