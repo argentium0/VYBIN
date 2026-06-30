@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:just_audio/just_audio.dart';
+import 'package:vybin/app.dart';
 import '../../../core/services/media_service.dart';
 import '../../../shared/theme/vybin_theme.dart';
 import '../bloc/chat_bloc.dart';
@@ -311,7 +312,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(widget.contactName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  Text('online', style: VybinTheme.caption.copyWith(color: VybinTheme.whatsappGreen)),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: VybinApp.showActivityStatusNotifier,
+                    builder: (context, showStatus, _) {
+                      if (!showStatus) return const SizedBox.shrink();
+                      return Text('online', style: VybinTheme.caption.copyWith(color: VybinTheme.whatsappGreen));
+                    },
+                  ),
                 ],
               ),
             ],

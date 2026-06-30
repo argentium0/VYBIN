@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vybin/app.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_event.dart';
@@ -134,6 +135,32 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Account Security settings are managed automatically.')),
+                    );
+                  },
+                ),
+                const Divider(),
+
+                // Activity Status Toggle
+                ValueListenableBuilder<bool>(
+                  valueListenable: VybinApp.showActivityStatusNotifier,
+                  builder: (context, showStatus, _) {
+                    return SwitchListTile(
+                      secondary: Icon(
+                        Icons.visibility_outlined,
+                        color: theme.iconTheme.color,
+                      ),
+                      title: Text('Activity Status', style: TextStyle(color: onSurface)),
+                      subtitle: const Text(
+                        'Show when you are active. If off, you won\'t see others\' activity status.',
+                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                      ),
+                      value: showStatus,
+                      activeColor: VybinTheme.whatsappGreen,
+                      onChanged: (bool value) async {
+                        VybinApp.showActivityStatusNotifier.value = value;
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('show_activity_status', value);
+                      },
                     );
                   },
                 ),
