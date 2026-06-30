@@ -31,6 +31,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         type: event.type,
         plaintext: event.plaintext, // For UI rendering before encryption
         status: 'sent',
+        mediaUrl: event.mediaUrl,
       );
 
       final updatedMessages = List<Message>.from(currentState.messages)..insert(0, newMessage);

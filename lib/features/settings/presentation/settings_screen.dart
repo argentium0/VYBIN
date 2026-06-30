@@ -12,15 +12,12 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Scaffold(
-      backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
-        backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Settings', style: TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
+        title: const Text('Settings'),
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
@@ -47,20 +44,20 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     title: Text(
                       currentUser.displayName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: onSurface,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
                     ),
-                    subtitle: Text(
-                      '@${currentUser.username}',
-                      style: const TextStyle(color: VybinTheme.secondaryText),
+                    subtitle: const Text(
+                      'Profile details, E2EE key status',
+                      style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
                     ),
                     trailing: const Icon(Icons.chevron_right, color: VybinTheme.whatsappGreen),
                     onTap: () => context.push('/profile'),
                   ),
-                  const Divider(color: VybinTheme.dividerCharcoal, height: 32),
+                  const Divider(height: 32),
                 ],
 
                 // Cryptographic key PEM section (Spec 9.8 / 9.7)
@@ -68,26 +65,22 @@ class SettingsScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Card(
-                      color: VybinTheme.cardCharcoal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Row(
+                            Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.vpn_key_outlined,
                                   color: VybinTheme.whatsappGreen,
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Text(
                                   'E2EE Cryptographic Identity',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: onSurface,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
@@ -106,7 +99,7 @@ class SettingsScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.grey[850],
+                                color: theme.inputDecorationTheme.fillColor,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               height: 100,
@@ -132,8 +125,8 @@ class SettingsScreen extends StatelessWidget {
 
                 // Account: Privacy, Security, Change Password (stubs)
                 ListTile(
-                  leading: const Icon(Icons.lock_outline, color: Colors.white),
-                  title: const Text('Account', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.lock_outline, color: theme.iconTheme.color),
+                  title: Text('Account', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'Privacy, security, change password',
                     style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
@@ -144,7 +137,7 @@ class SettingsScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const Divider(color: VybinTheme.dividerCharcoal),
+                const Divider(),
 
                 // Chats: Theme (light/dark switch), Chat Backup (stub)
                 ValueListenableBuilder<ThemeMode>(
@@ -153,9 +146,9 @@ class SettingsScreen extends StatelessWidget {
                     return SwitchListTile(
                       secondary: Icon(
                         currentMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
-                        color: Colors.white,
+                        color: theme.iconTheme.color,
                       ),
-                      title: const Text('Dark Mode', style: TextStyle(color: Colors.white)),
+                      title: Text('Dark Mode', style: TextStyle(color: onSurface)),
                       subtitle: const Text(
                         'Toggle application visual theme',
                         style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
@@ -169,8 +162,8 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.backup_outlined, color: Colors.white),
-                  title: const Text('Chat Backup', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.backup_outlined, color: theme.iconTheme.color),
+                  title: Text('Chat Backup', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'Local backup configurations (Stub)',
                     style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
@@ -181,24 +174,24 @@ class SettingsScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const Divider(color: VybinTheme.dividerCharcoal),
+                const Divider(),
 
                 // Notifications settings
                 ListTile(
-                  leading: const Icon(Icons.notifications_none_outlined, color: Colors.white),
-                  title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.notifications_none_outlined, color: theme.iconTheme.color),
+                  title: Text('Notifications', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'Tones, vibration, popup preview controls',
                     style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
                   ),
                   onTap: () {},
                 ),
-                const Divider(color: VybinTheme.dividerCharcoal),
+                const Divider(),
 
                 // Help and licenses
                 ListTile(
-                  leading: const Icon(Icons.help_outline_outlined, color: Colors.white),
-                  title: const Text('Help', style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.help_outline_outlined, color: theme.iconTheme.color),
+                  title: Text('Help', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'FAQ, contact support, licenses',
                     style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
@@ -213,7 +206,7 @@ class SettingsScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const Divider(color: VybinTheme.dividerCharcoal),
+                const Divider(),
 
                 // Log Out Option
                 ListTile(

@@ -13,13 +13,23 @@ class MediaService {
   final AudioRecorder _audioRecorder;
   final AudioPlayer _audioPlayer;
 
+  String? currentPlayingUrl;
+
+  AudioPlayer get audioPlayer => _audioPlayer;
+
   MediaService({
     ImagePicker? imagePicker,
     AudioRecorder? audioRecorder,
     AudioPlayer? audioPlayer,
   })  : _imagePicker = imagePicker ?? ImagePicker(),
         _audioRecorder = audioRecorder ?? AudioRecorder(),
-        _audioPlayer = audioPlayer ?? AudioPlayer();
+        _audioPlayer = audioPlayer ?? AudioPlayer() {
+    _audioPlayer.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        currentPlayingUrl = null;
+      }
+    });
+  }
 
   /// Requests Camera Permission.
   Future<bool> requestCameraPermission() async {
@@ -111,12 +121,14 @@ class MediaService {
 
   /// Plays a given local audio file.
   Future<void> playAudio(String filePath) async {
+    currentPlayingUrl = filePath;
     await _audioPlayer.setFilePath(filePath);
     await _audioPlayer.play();
   }
 
   /// Stops playback.
   Future<void> stopAudio() async {
+    currentPlayingUrl = null;
     await _audioPlayer.stop();
   }
 

@@ -1,6 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:just_audio/just_audio.dart';
+import '../../../core/services/media_service.dart';
 import '../../../shared/theme/vybin_theme.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
@@ -26,15 +32,21 @@ class IndividualChatScreen extends StatefulWidget {
 class _IndividualChatScreenState extends State<IndividualChatScreen> with SingleTickerProviderStateMixin {
   late ChatBloc _chatBloc;
   final TextEditingController _messageController = TextEditingController();
+  final MediaService _mediaService = MediaService();
 
   // Temporary hardcoded sender UID for MVP
   final String _currentUserId = 'my_uid_123';
 
   // Audio recording local states
   bool _isRecording = false;
+  bool _isRecordingLocked = false;
   int _recordingDuration = 0;
   Timer? _recordingTimer;
   bool _isTextEmpty = true;
+
+  // Drag coordinates for cancel/lock
+  double _dragDy = 0.0;
+  double _dragDx = 0.0;
 
   late AnimationController _micAnimationController;
   late Animation<double> _micAnimationScale;
@@ -60,6 +72,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
     _messageController.dispose();
     _micAnimationController.dispose();
     _recordingTimer?.cancel();
+    _mediaService.dispose();
     _chatBloc.close();
     super.dispose();
   }
@@ -73,54 +86,127 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
     }
   }
 
-  void _startRecording() {
-    setState(() {
-      _isRecording = true;
-      _recordingDuration = 0;
-    });
-    _micAnimationController.repeat(reverse: true);
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  Future<void> _startRecording() async {
+    try {
+      final hasPermission = await _mediaService.requestMicrophonePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission is required to record voice notes.')),
+          );
+        }
+        return;
+      }
+
       setState(() {
-        _recordingDuration++;
+        _isRecording = true;
+        _isRecordingLocked = false;
+        _recordingDuration = 0;
+        _dragDx = 0.0;
+        _dragDy = 0.0;
       });
-    });
+
+      await _mediaService.startRecording();
+
+      _micAnimationController.repeat(reverse: true);
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            _recordingDuration++;
+          });
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error starting recording: $e')),
+        );
+      }
+    }
   }
 
-  void _stopRecording() {
+  Future<void> _stopRecording({bool shouldSend = true}) async {
     if (!_isRecording) return;
+    
     _recordingTimer?.cancel();
     _recordingTimer = null;
     _micAnimationController.stop();
     _micAnimationController.reset();
 
-    final finalDuration = _recordingDuration > 0 ? _recordingDuration : 1;
-    final durationString = _formatDuration(finalDuration);
-
     setState(() {
       _isRecording = false;
+      _isRecordingLocked = false;
     });
 
-    // Generate mock message with voice type
-    _chatBloc.add(SendMessage(
-      plaintext: 'Voice Message ($durationString)',
-      type: 'voice',
-      senderUid: _currentUserId,
-    ));
+    try {
+      final bytes = await _mediaService.stopRecording();
+      if (!shouldSend || bytes == null) {
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a');
+      await file.writeAsBytes(bytes);
+
+      final finalDuration = _recordingDuration > 0 ? _recordingDuration : 1;
+      final durationString = _formatDuration(finalDuration);
+
+      _chatBloc.add(SendMessage(
+        plaintext: 'Voice Message ($durationString)',
+        type: 'voice',
+        senderUid: _currentUserId,
+        mediaUrl: file.path,
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving recording: $e')),
+        );
+      }
+    }
+  }
+
+  void _onRecordingMoveUpdate(LongPressMoveUpdateDetails details) {
+    if (!_isRecording || _isRecordingLocked) return;
+    setState(() {
+      _dragDy = details.localOffsetFromOrigin.dy;
+      _dragDx = details.localOffsetFromOrigin.dx;
+    });
+
+    if (_dragDy < -80) {
+      setState(() {
+        _isRecordingLocked = true;
+        _dragDy = 0.0;
+        _dragDx = 0.0;
+      });
+    }
+
+    if (_dragDx < -120) {
+      _cancelRecording();
+    }
+  }
+
+  void _onRecordingMoveEnd(LongPressEndDetails details) {
+    if (_isRecordingLocked) {
+      return;
+    }
+    _stopRecording(shouldSend: true);
+  }
+
+  void _cancelRecording() {
+    _stopRecording(shouldSend: false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Recording cancelled'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   String _formatDuration(int seconds) {
     final int minutes = seconds ~/ 60;
     final int remainingSeconds = seconds % 60;
     return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  String _extractDuration(String plaintext) {
-    final start = plaintext.indexOf('(');
-    final end = plaintext.indexOf(')');
-    if (start != -1 && end != -1 && end > start) {
-      return plaintext.substring(start + 1, end);
-    }
-    return '0:00';
   }
 
   void _sendMessage() {
@@ -156,7 +242,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                 label: 'Camera',
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Implement camera logic
                 },
               ),
               _buildMediaOption(
@@ -165,7 +250,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                 label: 'Audio',
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Implement audio logic
                 },
               ),
               _buildMediaOption(
@@ -174,7 +258,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                 label: 'Document',
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Implement document logic
                 },
               ),
             ],
@@ -227,7 +310,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.contactName, style: VybinTheme.headline1.copyWith(fontSize: 18)),
+                  Text(widget.contactName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                   Text('online', style: VybinTheme.caption.copyWith(color: VybinTheme.whatsappGreen)),
                 ],
               ),
@@ -256,7 +339,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                       );
                     }
                     return ListView.builder(
-                      reverse: true, // Scroll from bottom to top
+                      reverse: true,
                       padding: const EdgeInsets.all(16),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
@@ -279,7 +362,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
 
   Widget _buildChatBubble(Message message, bool isMe) {
     if (message.type == 'voice') {
-      return _buildVoiceBubble(message, isMe);
+      return VoiceMessageBubble(
+        message: message,
+        isMe: isMe,
+        mediaService: _mediaService,
+      );
     }
 
     return Align(
@@ -311,206 +398,177 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
     );
   }
 
-  Widget _buildVoiceBubble(Message message, bool isMe) {
-    final durationText = _extractDuration(message.plaintext ?? 'Voice Message (0:00)');
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isMe ? 12 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 12),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x21000000),
-              blurRadius: 1,
-              offset: Offset(0, 1),
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: isMe ? Colors.white.withValues(alpha: 0.2) : VybinTheme.whatsappTeal.withValues(alpha: 0.2),
-              child: Icon(
-                Icons.play_arrow_rounded,
-                color: isMe ? Colors.white : VybinTheme.whatsappTeal,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(15, (index) {
-                      final heights = [6, 12, 18, 14, 8, 16, 22, 18, 12, 20, 14, 8, 12, 10, 6];
-                      return Container(
-                        width: 3,
-                        height: heights[index % heights.length].toDouble(),
-                        decoration: BoxDecoration(
-                          color: isMe 
-                              ? Colors.white.withValues(alpha: 0.8) 
-                              : VybinTheme.secondaryText.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        durationText,
-                        style: VybinTheme.caption.copyWith(
-                          color: isMe 
-                              ? (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
-                              : VybinTheme.secondaryText,
-                        ),
-                      ),
-                      if (isMe)
-                        Icon(
-                          Icons.done_all,
-                          color: isMe 
-                              ? (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
-                              : VybinTheme.secondaryText,
-                          size: 16,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildInputZone() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).inputDecorationTheme.fillColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
-                  children: [
-                    Row(
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          color: theme.scaffoldBackgroundColor,
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.inputDecorationTheme.fillColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.emoji_emotions_outlined, color: VybinTheme.secondaryText),
-                          onPressed: () {},
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            style: VybinTheme.body1,
-                            decoration: const InputDecoration(
-                              hintText: 'Message',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              filled: false,
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.emoji_emotions_outlined, color: VybinTheme.secondaryText),
+                              onPressed: () {},
                             ),
-                            maxLines: 6,
-                            minLines: 1,
+                            Expanded(
+                              child: TextField(
+                                controller: _messageController,
+                                style: VybinTheme.body1,
+                                textInputAction: TextInputAction.send,
+                                onSubmitted: (_) => _sendMessage(),
+                                decoration: const InputDecoration(
+                                  hintText: 'Message',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  filled: false,
+                                ),
+                                maxLines: 6,
+                                minLines: 1,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.attach_file, color: VybinTheme.secondaryText),
+                              onPressed: _showMediaBottomSheet,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.camera_alt_outlined, color: VybinTheme.secondaryText),
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
+                          left: _isRecording ? 0 : -MediaQuery.of(context).size.width,
+                          right: _isRecording ? 0 : MediaQuery.of(context).size.width,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            color: theme.inputDecorationTheme.fillColor,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                const GlowingCrimsonDot(),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _formatDuration(_recordingDuration),
+                                  style: TextStyle(
+                                    color: onSurface,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (!_isRecordingLocked) ...[
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.chevron_left, size: 16, color: VybinTheme.secondaryText),
+                                      Text(
+                                        'Swipe to cancel',
+                                        style: VybinTheme.caption.copyWith(
+                                          color: VybinTheme.secondaryText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ] else ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    onPressed: _cancelRecording,
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    'Locked recording...',
+                                    style: VybinTheme.caption.copyWith(
+                                      color: VybinTheme.whatsappGreen,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(width: 8),
+                              ],
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.attach_file, color: VybinTheme.secondaryText),
-                          onPressed: _showMediaBottomSheet,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.camera_alt_outlined, color: VybinTheme.secondaryText),
-                          onPressed: () {},
                         ),
                       ],
                     ),
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      left: _isRecording ? 0 : -MediaQuery.of(context).size.width,
-                      right: _isRecording ? 0 : MediaQuery.of(context).size.width,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        color: Theme.of(context).inputDecorationTheme.fillColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            const GlowingCrimsonDot(),
-                            const SizedBox(width: 12),
-                            Text(
-                              _formatDuration(_recordingDuration),
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              'Recording...',
-                              style: VybinTheme.caption.copyWith(
-                                color: VybinTheme.secondaryText,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                        ),
-                      ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  if (!_isTextEmpty) {
+                    _sendMessage();
+                  } else if (_isRecordingLocked) {
+                    _stopRecording(shouldSend: true);
+                  }
+                },
+                onLongPressStart: _isTextEmpty ? (_) => _startRecording() : null,
+                onLongPressMoveUpdate: _isTextEmpty ? (details) => _onRecordingMoveUpdate(details) : null,
+                onLongPressEnd: _isTextEmpty ? (details) => _onRecordingMoveEnd(details) : null,
+                child: ScaleTransition(
+                  scale: _micAnimationScale,
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: VybinTheme.whatsappGreen,
+                    child: Icon(
+                      (_isTextEmpty && !_isRecordingLocked) ? Icons.mic : Icons.send,
+                      color: Colors.white,
                     ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_isRecording && !_isRecordingLocked)
+          Positioned(
+            right: 16,
+            bottom: 72 + (_dragDy < 0 ? _dragDy : 0),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _isRecording ? 1.0 : 0.0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: theme.cardTheme.color,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))
+                  ],
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock, color: VybinTheme.secondaryText, size: 18),
+                    SizedBox(height: 4),
+                    Icon(Icons.keyboard_arrow_up, color: VybinTheme.secondaryText, size: 14),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {
-              if (!_isTextEmpty) {
-                _sendMessage();
-              }
-            },
-            onLongPressStart: _isTextEmpty ? (_) => _startRecording() : null,
-            onLongPressEnd: _isTextEmpty ? (_) => _stopRecording() : null,
-            child: ScaleTransition(
-              scale: _micAnimationScale,
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: VybinTheme.whatsappGreen,
-                child: Icon(
-                  _isTextEmpty ? Icons.mic : Icons.send,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -557,6 +615,287 @@ class _GlowingCrimsonDotState extends State<GlowingCrimsonDot> with SingleTicker
               color: Colors.red,
               blurRadius: 8,
               spreadRadius: 2,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class VoiceMessageBubble extends StatefulWidget {
+  final Message message;
+  final bool isMe;
+  final MediaService mediaService;
+
+  const VoiceMessageBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    required this.mediaService,
+  });
+
+  @override
+  State<VoiceMessageBubble> createState() => _VoiceMessageBubbleState();
+}
+
+class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
+  StreamSubscription? _positionSub;
+  StreamSubscription? _stateSub;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _isPlaying = false;
+  
+  Timer? _simulationTimer;
+  int _simulatedElapsedSeconds = 0;
+  int _totalDurationSeconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _parseTotalDuration();
+    _initAudioListeners();
+  }
+
+  void _parseTotalDuration() {
+    final plaintext = widget.message.plaintext ?? '';
+    final start = plaintext.indexOf('(');
+    final end = plaintext.indexOf(')');
+    if (start != -1 && end != -1 && end > start) {
+      final parts = plaintext.substring(start + 1, end).split(':');
+      if (parts.length == 2) {
+        final m = int.tryParse(parts[0]) ?? 0;
+        final s = int.tryParse(parts[1]) ?? 0;
+        _totalDurationSeconds = m * 60 + s;
+        _duration = Duration(seconds: _totalDurationSeconds);
+      }
+    }
+    if (_totalDurationSeconds == 0) {
+      _totalDurationSeconds = 5; 
+      _duration = const Duration(seconds: 5);
+    }
+  }
+
+  void _initAudioListeners() {
+    final player = widget.mediaService.audioPlayer;
+    
+    _positionSub = player.positionStream.listen((pos) {
+      if (widget.message.mediaUrl != null &&
+          widget.mediaService.currentPlayingUrl == widget.message.mediaUrl) {
+        if (mounted) {
+          setState(() {
+            _position = pos;
+          });
+        }
+      }
+    });
+
+    _stateSub = player.playerStateStream.listen((state) {
+      if (widget.message.mediaUrl != null &&
+          widget.mediaService.currentPlayingUrl == widget.message.mediaUrl) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state.playing;
+            if (state.processingState == ProcessingState.completed) {
+              _position = Duration.zero;
+              _isPlaying = false;
+            }
+          });
+        }
+      } else {
+        if (_isPlaying && widget.message.mediaUrl != null) {
+          if (mounted) {
+            setState(() {
+              _isPlaying = false;
+              _position = Duration.zero;
+            });
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _positionSub?.cancel();
+    _stateSub?.cancel();
+    _simulationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _togglePlayback() async {
+    final mediaUrl = widget.message.mediaUrl;
+    
+    if (mediaUrl != null && mediaUrl.isNotEmpty) {
+      final isCurrent = widget.mediaService.currentPlayingUrl == mediaUrl;
+      if (isCurrent && _isPlaying) {
+        await widget.mediaService.stopAudio();
+      } else {
+        if (widget.mediaService.currentPlayingUrl != null) {
+          await widget.mediaService.stopAudio();
+        }
+        try {
+          await widget.mediaService.playAudio(mediaUrl);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Playback failed: $e')),
+            );
+          }
+        }
+      }
+    } else {
+      if (_isPlaying) {
+        _stopSimulation();
+      } else {
+        _startSimulation();
+      }
+    }
+  }
+
+  void _startSimulation() {
+    widget.mediaService.stopAudio();
+    
+    setState(() {
+      _isPlaying = true;
+      _simulatedElapsedSeconds = 0;
+      _position = Duration.zero;
+    });
+
+    _simulationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _simulatedElapsedSeconds++;
+          _position = Duration(seconds: _simulatedElapsedSeconds);
+          if (_simulatedElapsedSeconds >= _totalDurationSeconds) {
+            _stopSimulation();
+          }
+        });
+      }
+    });
+  }
+
+  void _stopSimulation() {
+    _simulationTimer?.cancel();
+    _simulationTimer = null;
+    if (mounted) {
+      setState(() {
+        _isPlaying = false;
+        _position = Duration.zero;
+        _simulatedElapsedSeconds = 0;
+      });
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isMe = widget.isMe;
+    final isPlayingThis = _isPlaying;
+    
+    final currentPos = _position;
+    final totalDur = _duration;
+    
+    double progress = 0.0;
+    if (totalDur.inMilliseconds > 0) {
+      progress = currentPos.inMilliseconds / totalDur.inMilliseconds;
+      if (progress > 1.0) progress = 1.0;
+    }
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 290),
+        decoration: BoxDecoration(
+          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: Radius.circular(isMe ? 12 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x21000000),
+              blurRadius: 1,
+              offset: Offset(0, 1),
+            )
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: _togglePlayback,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: isMe ? Colors.white.withOpacity(0.2) : VybinTheme.whatsappTeal.withOpacity(0.2),
+                child: Icon(
+                  isPlayingThis ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: isMe ? Colors.white : VybinTheme.whatsappTeal,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(15, (index) {
+                      final heights = [6, 12, 18, 14, 8, 16, 22, 18, 12, 20, 14, 8, 12, 10, 6];
+                      final barHeight = heights[index % heights.length].toDouble();
+                      
+                      final barProgress = index / 15;
+                      final isActive = isPlayingThis && barProgress <= progress;
+
+                      return Container(
+                        width: 3,
+                        height: barHeight,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? (isMe ? Colors.greenAccent : VybinTheme.whatsappGreen)
+                              : (isMe 
+                                  ? Colors.white.withOpacity(0.4) 
+                                  : VybinTheme.secondaryText.withOpacity(0.4)),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isPlayingThis ? _formatDuration(currentPos) : _formatDuration(totalDur),
+                        style: VybinTheme.caption.copyWith(
+                          color: isMe 
+                              ? (theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
+                              : VybinTheme.secondaryText,
+                        ),
+                      ),
+                      if (isMe)
+                        Icon(
+                          Icons.done_all,
+                          color: theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                          size: 16,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
