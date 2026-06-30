@@ -20,18 +20,23 @@ class EncryptionService {
   }
 
   /// Generates an RSA-2048 key pair in an isolate.
-  Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>> generateKeyPair() async {
+  Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>>
+  generateKeyPair() async {
     return await Isolate.run(() {
       final secureRandom = _getSecureRandom();
       final keyGen = RSAKeyGenerator()
-        ..init(ParametersWithRandom(
-          RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
-          secureRandom,
-        ));
-      
+        ..init(
+          ParametersWithRandom(
+            RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
+            secureRandom,
+          ),
+        );
+
       final pair = keyGen.generateKeyPair();
       return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(
-          pair.publicKey as RSAPublicKey, pair.privateKey as RSAPrivateKey);
+        pair.publicKey as RSAPublicKey,
+        pair.privateKey as RSAPrivateKey,
+      );
     });
   }
 
@@ -45,7 +50,7 @@ class EncryptionService {
     final salt = utf8.encode(uid);
     final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
       ..init(Pbkdf2Parameters(Uint8List.fromList(salt), 100000, 32));
-    
+
     return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
   }
 
@@ -79,9 +84,12 @@ class EncryptionService {
   }
 
   /// Decrypts the AES-256-GCM string back into an RSAPrivateKey.
-  RSAPrivateKey decryptPrivateKey(String encryptedBase64, Uint8List derivedKey) {
+  RSAPrivateKey decryptPrivateKey(
+    String encryptedBase64,
+    Uint8List derivedKey,
+  ) {
     final combined = base64Decode(encryptedBase64);
-    
+
     final nonce = combined.sublist(0, 12);
     final ciphertext = combined.sublist(12);
 
@@ -93,7 +101,7 @@ class EncryptionService {
 
     final plaintext = cipher.process(ciphertext);
     final serializedPem = utf8.decode(plaintext);
-    
+
     final Map<String, dynamic> keyData = jsonDecode(serializedPem);
     return RSAPrivateKey(
       BigInt.parse(keyData['n'] as String, radix: 16),

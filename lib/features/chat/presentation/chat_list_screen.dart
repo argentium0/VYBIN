@@ -39,7 +39,8 @@ String formatMessageTime(DateTime dateTime) {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
-  } else if (diff.inDays == 1 || (diff.inDays == 0 && now.day != dateTime.day)) {
+  } else if (diff.inDays == 1 ||
+      (diff.inDays == 0 && now.day != dateTime.day)) {
     return 'Yesterday';
   } else {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
@@ -83,7 +84,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Theme.of(context).dividerTheme.color ?? VybinTheme.dividerCharcoal,
+                  color:
+                      Theme.of(context).dividerTheme.color ??
+                      VybinTheme.dividerCharcoal,
                   width: 2,
                 ),
               ),
@@ -106,7 +109,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     final authState = context.read<AuthBloc>().state;
-    final myUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+    final myUid = authState is AuthAuthenticated
+        ? authState.user.uid
+        : 'my_uid_123';
 
     return ListView.separated(
       itemCount: filteredConversations.length,
@@ -117,8 +122,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
         final contact = getContactDetails(conv.conversationId);
         final unread = conv.unreadCount[myUid] ?? 0;
         final hasLastMessage = conv.lastMessagePreview != null;
-        final lastMessageText = hasLastMessage ? conv.lastMessagePreview!.ciphertext : '';
-        final isSentByMe = hasLastMessage && conv.lastMessagePreview!.senderUid == myUid;
+        final lastMessageText = hasLastMessage
+            ? conv.lastMessagePreview!.ciphertext
+            : '';
+        final isSentByMe =
+            hasLastMessage && conv.lastMessagePreview!.senderUid == myUid;
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
@@ -165,14 +173,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
               Text(
                 formatMessageTime(conv.lastMessageAt),
                 style: TextStyle(
-                  color: unread > 0 ? VybinTheme.whatsappGreen : VybinTheme.secondaryText,
+                  color: unread > 0
+                      ? VybinTheme.whatsappGreen
+                      : VybinTheme.secondaryText,
                   fontSize: 12,
                 ),
               ),
               const SizedBox(height: 4),
               if (unread > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: const BoxDecoration(
                     color: VybinTheme.whatsappGreen,
                     shape: BoxShape.circle,
@@ -238,7 +251,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search conversations...',
                   hintStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -420,15 +435,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
         builder: (context, state) {
           if (state is ChatListLoading) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: VybinTheme.whatsappGreen,
-              ),
+              child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
             );
           } else if (state is ChatListError) {
             return Center(
               child: Text(
                 state.errorMessage,
-                style: const TextStyle(color: VybinTheme.errorColor, fontSize: 16),
+                style: const TextStyle(
+                  color: VybinTheme.errorColor,
+                  fontSize: 16,
+                ),
               ),
             );
           } else if (state is ChatListLoaded) {

@@ -30,7 +30,8 @@ class IndividualChatScreen extends StatefulWidget {
   State<IndividualChatScreen> createState() => _IndividualChatScreenState();
 }
 
-class _IndividualChatScreenState extends State<IndividualChatScreen> with SingleTickerProviderStateMixin {
+class _IndividualChatScreenState extends State<IndividualChatScreen>
+    with SingleTickerProviderStateMixin {
   late ChatBloc _chatBloc;
   final TextEditingController _messageController = TextEditingController();
   final MediaService _mediaService = MediaService();
@@ -93,7 +94,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Microphone permission is required to record voice notes.')),
+            const SnackBar(
+              content: Text(
+                'Microphone permission is required to record voice notes.',
+              ),
+            ),
           );
         }
         return;
@@ -119,16 +124,16 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error starting recording: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error starting recording: $e')));
       }
     }
   }
 
   Future<void> _stopRecording({bool shouldSend = true}) async {
     if (!_isRecording) return;
-    
+
     _recordingTimer?.cancel();
     _recordingTimer = null;
     _micAnimationController.stop();
@@ -146,23 +151,27 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
       }
 
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a');
+      final file = File(
+        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+      );
       await file.writeAsBytes(bytes);
 
       final finalDuration = _recordingDuration > 0 ? _recordingDuration : 1;
       final durationString = _formatDuration(finalDuration);
 
-      _chatBloc.add(SendMessage(
-        plaintext: 'Voice Message ($durationString)',
-        type: 'voice',
-        senderUid: _currentUserId,
-        mediaUrl: file.path,
-      ));
+      _chatBloc.add(
+        SendMessage(
+          plaintext: 'Voice Message ($durationString)',
+          type: 'voice',
+          senderUid: _currentUserId,
+          mediaUrl: file.path,
+        ),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving recording: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving recording: $e')));
       }
     }
   }
@@ -213,11 +222,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isNotEmpty) {
-      _chatBloc.add(SendMessage(
-        plaintext: text,
-        type: 'text',
-        senderUid: _currentUserId,
-      ));
+      _chatBloc.add(
+        SendMessage(plaintext: text, type: 'text', senderUid: _currentUserId),
+      );
       _messageController.clear();
     }
   }
@@ -311,12 +318,22 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.contactName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    widget.contactName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   ValueListenableBuilder<bool>(
                     valueListenable: VybinApp.showActivityStatusNotifier,
                     builder: (context, showStatus, _) {
                       if (!showStatus) return const SizedBox.shrink();
-                      return Text('online', style: VybinTheme.caption.copyWith(color: VybinTheme.whatsappGreen));
+                      return Text(
+                        'online',
+                        style: VybinTheme.caption.copyWith(
+                          color: VybinTheme.whatsappGreen,
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -333,7 +350,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
               child: BlocBuilder<ChatBloc, ChatState>(
                 builder: (context, state) {
                   if (state is ChatLoading) {
-                    return const Center(child: CircularProgressIndicator(color: VybinTheme.neonHighlight));
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: VybinTheme.neonHighlight,
+                      ),
+                    );
                   } else if (state is ChatLoaded) {
                     final messages = state.messages;
                     if (messages.isEmpty) {
@@ -382,7 +403,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
         margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
+          color: isMe
+              ? VybinTheme.getSentBubbleColor(context)
+              : VybinTheme.getReceivedBubbleColor(context),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(8),
             topRight: const Radius.circular(8),
@@ -394,7 +417,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
               color: Color(0x21000000),
               blurRadius: 1,
               offset: Offset(0, 1),
-            )
+            ),
           ],
         ),
         child: Column(
@@ -404,7 +427,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
             Text(
               message.plaintext ?? '',
               style: VybinTheme.messageText.copyWith(
-                color: isMe ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+                color: isMe
+                    ? Colors.white
+                    : (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87),
               ),
             ),
             const SizedBox(height: 4),
@@ -415,7 +442,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                   _formatTime(message.timestamp),
                   style: TextStyle(
                     fontSize: 10,
-                    color: isMe ? Colors.white.withOpacity(0.7) : VybinTheme.secondaryText,
+                    color: isMe
+                        ? Colors.white.withOpacity(0.7)
+                        : VybinTheme.secondaryText,
                   ),
                 ),
                 if (isMe) ...[
@@ -477,7 +506,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.emoji_emotions_outlined, color: VybinTheme.secondaryText),
+                              icon: const Icon(
+                                Icons.emoji_emotions_outlined,
+                                color: VybinTheme.secondaryText,
+                              ),
                               onPressed: () {},
                             ),
                             Expanded(
@@ -499,11 +531,17 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.attach_file, color: VybinTheme.secondaryText),
+                              icon: const Icon(
+                                Icons.attach_file,
+                                color: VybinTheme.secondaryText,
+                              ),
                               onPressed: _showMediaBottomSheet,
                             ),
                             IconButton(
-                              icon: const Icon(Icons.camera_alt_outlined, color: VybinTheme.secondaryText),
+                              icon: const Icon(
+                                Icons.camera_alt_outlined,
+                                color: VybinTheme.secondaryText,
+                              ),
                               onPressed: () {},
                             ),
                           ],
@@ -511,8 +549,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeOutCubic,
-                          left: _isRecording ? 0 : -MediaQuery.of(context).size.width,
-                          right: _isRecording ? 0 : MediaQuery.of(context).size.width,
+                          left: _isRecording
+                              ? 0
+                              : -MediaQuery.of(context).size.width,
+                          right: _isRecording
+                              ? 0
+                              : MediaQuery.of(context).size.width,
                           top: 0,
                           bottom: 0,
                           child: Container(
@@ -535,7 +577,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.chevron_left, size: 16, color: VybinTheme.secondaryText),
+                                      const Icon(
+                                        Icons.chevron_left,
+                                        size: 16,
+                                        color: VybinTheme.secondaryText,
+                                      ),
                                       Text(
                                         'Swipe to cancel',
                                         style: VybinTheme.caption.copyWith(
@@ -546,7 +592,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                                   ),
                                 ] else ...[
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
                                     onPressed: _cancelRecording,
                                   ),
                                   const Spacer(),
@@ -577,16 +626,24 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                     _stopRecording(shouldSend: true);
                   }
                 },
-                onLongPressStart: _isTextEmpty ? (_) => _startRecording() : null,
-                onLongPressMoveUpdate: _isTextEmpty ? (details) => _onRecordingMoveUpdate(details) : null,
-                onLongPressEnd: _isTextEmpty ? (details) => _onRecordingMoveEnd(details) : null,
+                onLongPressStart: _isTextEmpty
+                    ? (_) => _startRecording()
+                    : null,
+                onLongPressMoveUpdate: _isTextEmpty
+                    ? (details) => _onRecordingMoveUpdate(details)
+                    : null,
+                onLongPressEnd: _isTextEmpty
+                    ? (details) => _onRecordingMoveEnd(details)
+                    : null,
                 child: ScaleTransition(
                   scale: _micAnimationScale,
                   child: CircleAvatar(
                     radius: 24,
                     backgroundColor: VybinTheme.whatsappGreen,
                     child: Icon(
-                      (_isTextEmpty && !_isRecordingLocked) ? Icons.mic : Icons.send,
+                      (_isTextEmpty && !_isRecordingLocked)
+                          ? Icons.mic
+                          : Icons.send,
                       color: Colors.white,
                     ),
                   ),
@@ -608,7 +665,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                   color: theme.cardTheme.color,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, -2),
+                    ),
                   ],
                 ),
                 child: const Column(
@@ -616,7 +677,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
                   children: [
                     Icon(Icons.lock, color: VybinTheme.secondaryText, size: 18),
                     SizedBox(height: 4),
-                    Icon(Icons.keyboard_arrow_up, color: VybinTheme.secondaryText, size: 14),
+                    Icon(
+                      Icons.keyboard_arrow_up,
+                      color: VybinTheme.secondaryText,
+                      size: 14,
+                    ),
                   ],
                 ),
               ),
@@ -634,7 +699,8 @@ class GlowingCrimsonDot extends StatefulWidget {
   State<GlowingCrimsonDot> createState() => _GlowingCrimsonDotState();
 }
 
-class _GlowingCrimsonDotState extends State<GlowingCrimsonDot> with SingleTickerProviderStateMixin {
+class _GlowingCrimsonDotState extends State<GlowingCrimsonDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacityAnimation;
 
@@ -645,7 +711,10 @@ class _GlowingCrimsonDotState extends State<GlowingCrimsonDot> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+    _opacityAnimation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(_controller);
   }
 
   @override
@@ -665,11 +734,7 @@ class _GlowingCrimsonDotState extends State<GlowingCrimsonDot> with SingleTicker
           color: Colors.redAccent,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: Colors.red,
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
+            BoxShadow(color: Colors.red, blurRadius: 8, spreadRadius: 2),
           ],
         ),
       ),
@@ -699,7 +764,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
-  
+
   Timer? _simulationTimer;
   int _simulatedElapsedSeconds = 0;
   int _totalDurationSeconds = 0;
@@ -725,14 +790,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       }
     }
     if (_totalDurationSeconds == 0) {
-      _totalDurationSeconds = 5; 
+      _totalDurationSeconds = 5;
       _duration = const Duration(seconds: 5);
     }
   }
 
   void _initAudioListeners() {
     final player = widget.mediaService.audioPlayer;
-    
+
     _positionSub = player.positionStream.listen((pos) {
       if (widget.message.mediaUrl != null &&
           widget.mediaService.currentPlayingUrl == widget.message.mediaUrl) {
@@ -779,7 +844,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   Future<void> _togglePlayback() async {
     final mediaUrl = widget.message.mediaUrl;
-    
+
     if (mediaUrl != null && mediaUrl.isNotEmpty) {
       final isCurrent = widget.mediaService.currentPlayingUrl == mediaUrl;
       if (isCurrent && _isPlaying) {
@@ -792,9 +857,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           await widget.mediaService.playAudio(mediaUrl);
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Playback failed: $e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
           }
         }
       }
@@ -809,7 +874,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   void _startSimulation() {
     widget.mediaService.stopAudio();
-    
+
     setState(() {
       _isPlaying = true;
       _simulatedElapsedSeconds = 0;
@@ -852,10 +917,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     final theme = Theme.of(context);
     final isMe = widget.isMe;
     final isPlayingThis = _isPlaying;
-    
+
     final currentPos = _position;
     final totalDur = _duration;
-    
+
     double progress = 0.0;
     if (totalDur.inMilliseconds > 0) {
       progress = currentPos.inMilliseconds / totalDur.inMilliseconds;
@@ -869,7 +934,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         constraints: const BoxConstraints(maxWidth: 290),
         decoration: BoxDecoration(
-          color: isMe ? VybinTheme.getSentBubbleColor(context) : VybinTheme.getReceivedBubbleColor(context),
+          color: isMe
+              ? VybinTheme.getSentBubbleColor(context)
+              : VybinTheme.getReceivedBubbleColor(context),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -881,7 +948,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
               color: Color(0x21000000),
               blurRadius: 1,
               offset: Offset(0, 1),
-            )
+            ),
           ],
         ),
         child: Row(
@@ -891,9 +958,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
               onTap: _togglePlayback,
               child: CircleAvatar(
                 radius: 18,
-                backgroundColor: isMe ? Colors.white.withOpacity(0.2) : VybinTheme.whatsappTeal.withOpacity(0.2),
+                backgroundColor: isMe
+                    ? Colors.white.withOpacity(0.2)
+                    : VybinTheme.whatsappTeal.withOpacity(0.2),
                 child: Icon(
-                  isPlayingThis ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  isPlayingThis
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
                   color: isMe ? Colors.white : VybinTheme.whatsappTeal,
                   size: 24,
                 ),
@@ -908,9 +979,26 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: List.generate(15, (index) {
-                      final heights = [6, 12, 18, 14, 8, 16, 22, 18, 12, 20, 14, 8, 12, 10, 6];
-                      final barHeight = heights[index % heights.length].toDouble();
-                      
+                      final heights = [
+                        6,
+                        12,
+                        18,
+                        14,
+                        8,
+                        16,
+                        22,
+                        18,
+                        12,
+                        20,
+                        14,
+                        8,
+                        12,
+                        10,
+                        6,
+                      ];
+                      final barHeight = heights[index % heights.length]
+                          .toDouble();
+
                       final barProgress = index / 15;
                       final isActive = isPlayingThis && barProgress <= progress;
 
@@ -919,10 +1007,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                         height: barHeight,
                         decoration: BoxDecoration(
                           color: isActive
-                              ? (isMe ? Colors.greenAccent : VybinTheme.whatsappGreen)
-                              : (isMe 
-                                  ? Colors.white.withOpacity(0.4) 
-                                  : VybinTheme.secondaryText.withOpacity(0.4)),
+                              ? (isMe
+                                    ? Colors.greenAccent
+                                    : VybinTheme.whatsappGreen)
+                              : (isMe
+                                    ? Colors.white.withOpacity(0.4)
+                                    : VybinTheme.secondaryText.withOpacity(
+                                        0.4,
+                                      )),
                           borderRadius: BorderRadius.circular(1.5),
                         ),
                       );
@@ -933,17 +1025,23 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isPlayingThis ? _formatDuration(currentPos) : _formatDuration(totalDur),
+                        isPlayingThis
+                            ? _formatDuration(currentPos)
+                            : _formatDuration(totalDur),
                         style: VybinTheme.caption.copyWith(
-                          color: isMe 
-                              ? (theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87) 
+                          color: isMe
+                              ? (theme.brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87)
                               : VybinTheme.secondaryText,
                         ),
                       ),
                       if (isMe)
                         Icon(
                           Icons.done_all,
-                          color: theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                          color: theme.brightness == Brightness.dark
+                              ? Colors.white70
+                              : Colors.black87,
                           size: 16,
                         ),
                     ],
