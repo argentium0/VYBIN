@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>VYBIN requires camera access to capture and send photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>VYBIN requires microphone access to record and send voice notes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>VYBIN requires gallery access to select and send media.</string>
 </dict>
 </plist>

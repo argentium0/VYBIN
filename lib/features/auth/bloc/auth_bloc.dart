@@ -5,7 +5,7 @@ import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/shared/models/user_model.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc() : super(AuthInitializing()) {
+  AuthBloc() : super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<LoginRequested>(_onLoginRequested);
     on<SignUpRequested>(_onSignUpRequested);
@@ -13,7 +13,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
-    emit(AuthInitializing());
+    emit(AuthInitial());
 
     // Simulate initial startup (checking login cache/keys storage)
     await Future.delayed(const Duration(milliseconds: 100));
@@ -26,7 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthAuthenticating());
+    emit(AuthLoading());
 
     // Simulate network authentication request
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -61,7 +61,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SignUpRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthAuthenticating());
+    emit(AuthLoading());
 
     // Simulate network registration & key generation request
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -98,7 +98,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthAuthenticating());
+    emit(AuthLoading());
 
     // Simulate cleanup
     await Future.delayed(const Duration(milliseconds: 800));

@@ -24,7 +24,6 @@ class _VybinAppState extends State<VybinApp> {
   void initState() {
     super.initState();
     VybinApp.onboardingCompleteNotifier.value = !widget.isFirstLaunch;
-    // Retrieve AuthBloc and create the state-aware central router
     final authBloc = context.read<AuthBloc>();
     _router = AppRouter.createRouter(authBloc);
   }

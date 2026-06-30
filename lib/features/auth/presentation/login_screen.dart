@@ -220,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is AuthAuthenticating;
+          final isLoading = state is AuthLoading;
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -334,7 +334,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: isLoading ? null : _showForgotPasswordDialog,
+                        onPressed: isLoading ? null : () => context.push('/forgot-password'),
                         child: Text(
                           'Forgot Password?',
                           style: VybinTheme.caption.copyWith(

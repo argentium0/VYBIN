@@ -399,7 +399,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is AuthAuthenticating;
+          final isLoading = state is AuthLoading;
 
           return SafeArea(
             child: SingleChildScrollView(

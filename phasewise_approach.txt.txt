@@ -1,0 +1,239 @@
+Mobile Application Development Course Project
+General Project Description
+The objective of this course project is to design and develop a complete cross-platform mobile application using Flutter and Firebase. The project will be completed in four phases, allowing students to gradually learn frontend development, application navigation, backend integration, and device service implementation. Each phase builds upon the previous one to provide practical experience in modern mobile application development.
+
+Phase 1: Flutter Frontend Development
+Objective
+Develop a fully functional user interface using Flutter by implementing fundamental widgets and layout concepts.
+
+Requirements
+Students must design attractive and responsive screens using the following Flutter components:
+
+Stateless Widgets
+
+Stateful Widgets
+
+MaterialApp and Scaffold
+
+AppBar
+
+Container
+
+Row and Column
+
+Stack
+
+ListView
+
+GridView
+
+Card
+
+Text Widget
+
+Image Widget
+
+Icons
+
+Buttons (Elevated, Outlined, Text, Icon)
+
+TextField
+
+Form Validation
+
+Radio Buttons
+
+Checkboxes
+
+Switches
+
+Dropdown Button
+
+Date Picker
+
+Time Picker
+
+Slider
+
+Progress Indicators
+
+Dialog Boxes
+
+Snackbar
+
+Bottom Sheet
+
+Drawer
+
+Bottom Navigation Bar
+
+Tab Bar
+
+Floating Action Button
+
+Responsive Layout using MediaQuery and Expanded/Flexible
+
+Deliverables
+Complete frontend UI
+
+Responsive design
+
+Clean code structure
+
+Proper widget hierarchy
+
+Phase 2: Navigation and Application Flow
+Objective
+Connect all application screens through Flutter navigation.
+
+Requirements
+Implement navigation using:
+
+Named Routes
+
+Navigator Push
+
+Navigator Pop
+
+Push Replacement
+
+Passing Data Between Screens
+
+Returning Data from Screens
+
+Bottom Navigation
+
+Drawer Navigation
+
+Tab Navigation
+
+Students should create a complete application flow where every screen is interconnected.
+
+Deliverables
+Working navigation among all screens
+
+Organized routing structure
+
+Smooth user experience
+
+Phase 3: Firebase Backend Integration
+Objective
+Integrate Firebase services to provide backend functionality.
+
+Requirements
+Implement Firebase with Flutter using:
+
+Firebase Project Configuration
+
+Firebase Authentication
+
+Email & Password Login
+
+Registration
+
+Password Reset
+
+Cloud Firestore
+
+Create Data
+
+Read Data
+
+Update Data
+
+Delete Data (CRUD)
+
+Firebase Storage (optional for images)
+
+Real-time Data Updates
+
+User Profile Management
+
+Deliverables
+Functional authentication system
+
+Firestore database integration
+
+Complete CRUD operations
+
+Real-time database synchronization
+
+Phase 4: Device Services and Sensor Integration
+Objective
+Enhance the application by integrating mobile device services and hardware sensors.
+
+Students may implement one or more of the following features:
+Device Services
+Camera
+
+Gallery Image Selection
+
+GPS Location
+
+Google Maps
+
+Notifications
+
+Phone Calls
+
+SMS
+
+Email
+
+QR Code Scanner
+
+File Picker
+
+Local Storage (Shared Preferences)
+
+Internet Connectivity Monitoring
+
+Mobile Sensors
+Accelerometer
+
+Gyroscope
+
+Compass
+
+Light Sensor
+
+Proximity Sensor
+
+Step Counter
+
+Biometric Authentication (Fingerprint/Face Unlock)
+
+Deliverables
+At least one device service implementation
+
+At least one sensor-based feature
+
+Proper permission handling
+
+Functional demonstration
+
+Project Evaluation Criteria
+Component	Weightage
+Phase 1: Flutter UI Development	30%
+Phase 2: Navigation Implementation	20%
+Phase 3: Firebase Backend	30%
+Phase 4: Services/Sensors Integration	20%
+Total	100%
+Expected Learning Outcomes
+Upon successful completion of this project, students will be able to:
+
+Design responsive mobile user interfaces using Flutter.
+
+Develop applications using Stateless and Stateful widgets.
+
+Implement navigation between multiple application screens.
+
+Connect Flutter applications with Firebase Authentication and Cloud Firestore.
+
+Perform complete CRUD operations using Firestore.
+
+Integrate mobile device services and hardware sensors.
+
+Develop a complete cross-platform mobile application following modern software development practices.
+
+This phased approach ensures that students gain practical experience in frontend development, navigation, backend integration, and device-level functionality while building a production-ready Flutter application.

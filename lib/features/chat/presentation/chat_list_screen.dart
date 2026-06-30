@@ -1,31 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_event.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
-import 'package:vybin/shared/theme/vybin_theme.dart';
+import 'package:vybin/features/chat/bloc/chat_list_bloc.dart';
+import 'package:vybin/features/chat/bloc/chat_list_event.dart';
+import 'package:vybin/features/chat/bloc/chat_list_state.dart';
+import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/user_model.dart';
-import 'package:go_router/go_router.dart';
-import 'package:vybin/app.dart';
+import 'package:vybin/shared/theme/vybin_theme.dart';
 
-class MockChat {
+class ContactDetails {
   final String displayName;
-  final String username;
-  final String lastMessage;
-  final String time;
-  final int unreadCount;
-  final bool isRead;
   final String avatarInitials;
+  final String username;
+  const ContactDetails(this.displayName, this.avatarInitials, this.username);
+}
 
-  const MockChat({
-    required this.displayName,
-    required this.username,
-    required this.lastMessage,
-    required this.time,
-    required this.unreadCount,
-    required this.isRead,
-    required this.avatarInitials,
-  });
+ContactDetails getContactDetails(String conversationId) {
+  if (conversationId == 'alice_vybin') {
+    return const ContactDetails('Abdulahad', 'AC', 'alice_vybin');
+  } else if (conversationId == 'bob_d') {
+    return const ContactDetails('Bro', 'BR', 'bob_d');
+  } else if (conversationId == 'charlie_b') {
+    return const ContactDetails('Hanzala Abid', 'HA', 'charlie_b');
+  }
+  final initials = conversationId.length >= 2
+      ? conversationId.substring(0, 2).toUpperCase()
+      : conversationId.toUpperCase();
+  return ContactDetails(conversationId, initials, conversationId);
+}
+
+String formatMessageTime(DateTime dateTime) {
+  final now = DateTime.now();
+  final diff = now.difference(dateTime);
+  if (diff.inDays == 0 && now.day == dateTime.day) {
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  } else if (diff.inDays == 1 || (diff.inDays == 0 && now.day != dateTime.day)) {
+    return 'Yesterday';
+  } else {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+  }
 }
 
 class ChatListScreen extends StatefulWidget {
@@ -36,44 +54,8 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  int _currentIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-
-  final List<MockChat> _mockChats = const [
-    MockChat(
-      displayName: 'Abdulahad',
-      username: 'alice_vybin',
-      lastMessage: '🔒 Hey there! Did you get the key?',
-      time: '10:35 AM',
-      unreadCount: 2,
-      isRead: false,
-      avatarInitials: 'AC',
-    ),
-    MockChat(
-      displayName: 'Bro',
-      username: 'bob_d',
-      lastMessage: '🔒 AES-GCM session key generated successfully.',
-      time: 'Yesterday',
-      unreadCount: 0,
-      isRead: true,
-      avatarInitials: 'BR',
-    ),
-    MockChat(
-      displayName: 'Hanzala Abid',
-      username: 'charlie_b',
-      lastMessage: '🔒 Let\'s verify our RSA public keys.',
-      time: '2 days ago',
-      unreadCount: 0,
-      isRead: false,
-      avatarInitials: 'HA',
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void dispose() {
@@ -81,217 +63,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.dispose();
   }
 
-  void _showNewChatSearchDialog(BuildContext context) {
-    final searchInputController = TextEditingController();
-    bool searchingUser = false;
-    UserModel? foundUser;
-    String searchFeedback = '';
+  Widget _buildChatsView(List<ConversationModel> conversations) {
+    final filteredConversations = conversations.where((conv) {
+      if (!_isSearching) return true;
+      final query = _searchController.text.toLowerCase();
+      final contact = getContactDetails(conv.conversationId);
+      return contact.displayName.toLowerCase().contains(query) ||
+          contact.username.toLowerCase().contains(query);
+    }).toList();
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: VybinTheme.cardCharcoal,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'New Secure Chat',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Search for a user by their exact handle to initiate key encapsulation.',
-                    style: TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: searchInputController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Username',
-                      prefixText: '@ ',
-                      prefixStyle: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (searchFeedback.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      searchFeedback,
-                      style: TextStyle(
-                        color: foundUser != null
-                            ? VybinTheme.whatsappGreen
-                            : VybinTheme.errorColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                  if (foundUser != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: VybinTheme.inputCharcoal,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: VybinTheme.whatsappTeal,
-                            child: Text(
-                              foundUser!.displayName
-                                  .substring(0, 2)
-                                  .toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  foundUser!.displayName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '@${foundUser!.username}',
-                                  style: const TextStyle(
-                                    color: VybinTheme.secondaryText,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: VybinTheme.secondaryText),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                if (foundUser == null)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: VybinTheme.whatsappGreen,
-                    ),
-                    onPressed: searchingUser
-                        ? null
-                        : () async {
-                            final text = searchInputController.text
-                                .trim()
-                                .toLowerCase();
-                            if (text.isEmpty) return;
-
-                            setDialogState(() {
-                              searchingUser = true;
-                              searchFeedback = 'Querying directory...';
-                            });
-
-                            await Future.delayed(
-                              const Duration(milliseconds: 600),
-                            );
-
-                            setDialogState(() {
-                              searchingUser = false;
-                              if (text == 'taken' ||
-                                  text == 'alice_vybin' ||
-                                  text == 'bob_d') {
-                                foundUser = UserModel(
-                                  uid: 'mock_searched_123',
-                                  username: text,
-                                  displayName: text == 'bob_d'
-                                      ? 'Bob Dylan'
-                                      : 'Alice Cooper',
-                                  email: '$text@example.com',
-                                  profilePhotoUrl: null,
-                                  publicKey:
-                                      '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgK...',
-                                  fcmToken: 'token',
-                                  onlineStatus: 'online',
-                                  lastSeen: DateTime.now(),
-                                  about: 'Hey there! I am using VYBIN',
-                                  createdAt: DateTime.now(),
-                                  blockedUids: const [],
-                                );
-                                searchFeedback = '✓ Secure Identity Verified';
-                              } else {
-                                foundUser = null;
-                                searchFeedback = '✗ Username not found';
-                              }
-                            });
-                          },
-                    child: searchingUser
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Search',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                  )
-                else
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: VybinTheme.whatsappGreen,
-                    ),
-                    child: const Text(
-                      'Message (E2EE)',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '🔒 Initiating end-to-end encrypted session with @${foundUser!.username}',
-                          ),
-                          backgroundColor: VybinTheme.whatsappTeal,
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildChatsView(List<MockChat> filteredChats) {
-    if (filteredChats.isEmpty) {
+    if (filteredConversations.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -302,9 +83,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: Theme.of(context).colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color:
-                      Theme.of(context).dividerTheme.color ??
-                      VybinTheme.dividerCharcoal,
+                  color: Theme.of(context).dividerTheme.color ?? VybinTheme.dividerCharcoal,
                   width: 2,
                 ),
               ),
@@ -318,7 +97,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             const Text('No conversations found', style: VybinTheme.headline1),
             const SizedBox(height: 8),
             const Text(
-              'Search or press the plus button to start a chat',
+              'Search or press the button to start a chat',
               style: VybinTheme.body2,
             ),
           ],
@@ -326,364 +105,106 @@ class _ChatListScreenState extends State<ChatListScreen> {
       );
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.separated(
-            itemCount: filteredChats.length,
-            separatorBuilder: (context, index) =>
-                const Divider(color: VybinTheme.dividerCharcoal, indent: 80),
-            itemBuilder: (context, index) {
-              final chat = filteredChats[index];
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+    final authState = context.read<AuthBloc>().state;
+    final myUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+
+    return ListView.separated(
+      itemCount: filteredConversations.length,
+      separatorBuilder: (context, index) =>
+          const Divider(color: VybinTheme.dividerCharcoal, indent: 80),
+      itemBuilder: (context, index) {
+        final conv = filteredConversations[index];
+        final contact = getContactDetails(conv.conversationId);
+        final unread = conv.unreadCount[myUid] ?? 0;
+        final hasLastMessage = conv.lastMessagePreview != null;
+        final lastMessageText = hasLastMessage ? conv.lastMessagePreview!.ciphertext : '';
+        final isSentByMe = hasLastMessage && conv.lastMessagePreview!.senderUid == myUid;
+
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          leading: CircleAvatar(
+            radius: 26,
+            backgroundColor: VybinTheme.whatsappTeal,
+            child: Text(
+              contact.avatarInitials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          title: Text(
+            contact.displayName,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(
+              lastMessageText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: VybinTheme.secondaryText,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          trailing: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatMessageTime(conv.lastMessageAt),
+                style: TextStyle(
+                  color: unread > 0 ? VybinTheme.whatsappGreen : VybinTheme.secondaryText,
+                  fontSize: 12,
                 ),
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: VybinTheme.whatsappTeal,
+              ),
+              const SizedBox(height: 4),
+              if (unread > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: VybinTheme.whatsappGreen,
+                    shape: BoxShape.circle,
+                  ),
                   child: Text(
-                    chat.avatarInitials,
+                    '$unread',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
+                )
+              else if (isSentByMe)
+                const Icon(
+                  Icons.done_all,
+                  color: VybinTheme.neonBlue,
+                  size: 16,
                 ),
-                title: Text(
-                  chat.displayName,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    chat.lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                trailing: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      chat.time,
-                      style: TextStyle(
-                        color: chat.unreadCount > 0
-                            ? VybinTheme.whatsappGreen
-                            : VybinTheme.secondaryText,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    if (chat.unreadCount > 0)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: VybinTheme.whatsappGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${chat.unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    else if (chat.isRead)
-                      const Icon(
-                        Icons.done_all,
-                        color: VybinTheme.neonBlue,
-                        size: 16,
-                      )
-                    else
-                      const Icon(
-                        Icons.done,
-                        color: VybinTheme.secondaryText,
-                        size: 16,
-                      ),
-                  ],
-                ),
-                onTap: () {
-                  context.push(
-                    '/chat/${chat.username}',
-                    extra: {
-                      'contactName': chat.displayName,
-                      'contactAvatarInitials': chat.avatarInitials,
-                    },
-                  );
-                },
-              );
-            },
+            ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsView(UserModel? currentUser) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // User Profile Header
-          Card(
-            color: Theme.of(context).colorScheme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: VybinTheme.whatsappTeal,
-                    child: Text(
-                      currentUser != null
-                          ? currentUser.displayName
-                                .substring(0, 2)
-                                .toUpperCase()
-                          : 'G',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          currentUser != null
-                              ? currentUser.displayName
-                              : 'Guest User',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          currentUser != null
-                              ? '@${currentUser.username}'
-                              : '@guest',
-                          style: const TextStyle(
-                            color: VybinTheme.secondaryText,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentUser != null
-                              ? currentUser.about
-                              : 'Hey there! I am using VYBIN',
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.7),
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Encryption Keys Details Section
-          Card(
-            color: Theme.of(context).colorScheme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.vpn_key_outlined,
-                        color: VybinTheme.whatsappGreen,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'E2EE Cryptographic Identity',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Your generated RSA-2048 public identity key PEM block:',
-                    style: TextStyle(
-                      color: VybinTheme.secondaryText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[800]
-                          : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    height: 120,
-                    child: SingleChildScrollView(
-                      child: Text(
-                        currentUser != null
-                            ? currentUser.publicKey
-                            : 'RSA Public Key details unavailable',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.greenAccent
-                              : Colors.green[900],
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Settings lists
-          ListTile(
-            leading: Icon(
-              Icons.lock_outline,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            title: Text(
-              'Privacy',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-            subtitle: const Text(
-              'Blocked contacts, last seen visibility',
-              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
-            ),
-            onTap: () {},
-          ),
-          const Divider(),
-          ListTile(
-            leading: Icon(
-              Icons.backup_outlined,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            title: Text(
-              'Chat Backup',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-            subtitle: const Text(
-              'Local backup configuration',
-              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
-            ),
-            onTap: () {},
-          ),
-          const Divider(),
-          ListTile(
-            leading: Icon(
-              Icons.notifications_active_outlined,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            title: Text(
-              'Notifications',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-            subtitle: const Text(
-              'Vibration, tones, indicators',
-              style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
-            ),
-            onTap: () {},
-          ),
-          const Divider(),
-
-          // Dark Mode Toggle Switch Tile
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: VybinApp.themeNotifier,
-            builder: (context, currentMode, _) {
-              return ListTile(
-                leading: Icon(
-                  currentMode == ThemeMode.dark
-                      ? Icons.dark_mode
-                      : Icons.light_mode,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                title: Text(
-                  'Dark Mode',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Toggle between light and dark themes',
-                  style: TextStyle(
-                    color: VybinTheme.secondaryText,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: Switch(
-                  value: currentMode == ThemeMode.dark,
-                  activeColor: VybinTheme.whatsappGreen,
-                  onChanged: (bool value) {
-                    VybinApp.themeNotifier.value = value
-                        ? ThemeMode.dark
-                        : ThemeMode.light;
-                  },
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: VybinTheme.errorColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: const Text(
-              'Log Out Account',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutRequested());
-            },
-          ),
-        ],
-      ),
+          onTap: () {
+            context.push(
+              '/chat/${contact.username}',
+              extra: {
+                'contactName': contact.displayName,
+                'contactAvatarInitials': contact.avatarInitials,
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -694,14 +215,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (authState is AuthAuthenticated) {
       currentUser = authState.user;
     }
-
-    // Dynamic filtering for chats search
-    final filteredChats = _mockChats.where((chat) {
-      if (!_isSearching) return true;
-      final query = _searchController.text.toLowerCase();
-      return chat.displayName.toLowerCase().contains(query) ||
-          chat.username.toLowerCase().contains(query);
-    }).toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -725,9 +238,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search conversations...',
                   hintStyle: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -788,9 +299,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     if (value == 'logout') {
                       context.read<AuthBloc>().add(LogoutRequested());
                     } else if (value == 'settings') {
-                      setState(() {
-                        _currentIndex = 1;
-                      });
+                      context.push('/settings');
                     }
                   },
                   itemBuilder: (BuildContext context) {
@@ -821,33 +330,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
-                color: VybinTheme.whatsappDarkTeal,
-              ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                child: Text(
-                  currentUser != null
-                      ? currentUser.displayName.substring(0, 2).toUpperCase()
-                      : 'VY',
-                  style: const TextStyle(
-                    color: VybinTheme.whatsappGreen,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/profile');
+              },
+              child: UserAccountsDrawerHeader(
+                decoration: const BoxDecoration(
+                  color: VybinTheme.whatsappDarkTeal,
+                ),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  child: Text(
+                    currentUser != null
+                        ? currentUser.displayName.substring(0, 2).toUpperCase()
+                        : 'VY',
+                    style: const TextStyle(
+                      color: VybinTheme.whatsappGreen,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              accountName: Text(
-                currentUser != null ? currentUser.displayName : 'Guest User',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                accountName: Text(
+                  currentUser != null ? currentUser.displayName : 'Guest User',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              accountEmail: Text(
-                currentUser != null ? '@${currentUser.username}' : '@guest',
-                style: const TextStyle(color: Colors.white70),
+                accountEmail: Text(
+                  currentUser != null ? '@${currentUser.username}' : '@guest',
+                  style: const TextStyle(color: Colors.white70),
+                ),
               ),
             ),
             ListTile(
@@ -867,9 +382,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               onTap: () {
                 Navigator.pop(context);
-                setState(() {
-                  _currentIndex = 1;
-                });
+                context.push('/settings');
               },
             ),
             ListTile(
@@ -885,9 +398,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               onTap: () {
                 Navigator.pop(context);
-                setState(() {
-                  _currentIndex = 1;
-                });
+                context.push('/settings');
               },
             ),
             const Divider(),
@@ -905,21 +416,33 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _currentIndex == 0
-                ? _buildChatsView(filteredChats)
-                : _buildSettingsView(currentUser),
-          ),
-        ],
+      body: BlocBuilder<ChatListBloc, ChatListState>(
+        builder: (context, state) {
+          if (state is ChatListLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: VybinTheme.whatsappGreen,
+              ),
+            );
+          } else if (state is ChatListError) {
+            return Center(
+              child: Text(
+                state.errorMessage,
+                style: const TextStyle(color: VybinTheme.errorColor, fontSize: 16),
+              ),
+            );
+          } else if (state is ChatListLoaded) {
+            return _buildChatsView(state.conversations);
+          }
+          return const SizedBox.shrink();
+        },
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: 0,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          if (index == 1) {
+            context.push('/settings');
+          }
         },
         selectedItemColor: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF00FFCC)
@@ -942,14 +465,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ],
       ),
-      floatingActionButton: _currentIndex == 0
-          ? FloatingActionButton(
-              backgroundColor: VybinTheme.whatsappGreen,
-              foregroundColor: Colors.white,
-              onPressed: () => _showNewChatSearchDialog(context),
-              child: const Icon(Icons.chat_outlined),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: VybinTheme.whatsappGreen,
+        foregroundColor: Colors.white,
+        onPressed: () => context.push('/new-chat'),
+        child: const Icon(Icons.chat_outlined),
+      ),
     );
   }
 }

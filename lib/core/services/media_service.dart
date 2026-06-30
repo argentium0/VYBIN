@@ -1,0 +1,128 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:record/record.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+
+class MediaService {
+  final ImagePicker _imagePicker;
+  final AudioRecorder _audioRecorder;
+  final AudioPlayer _audioPlayer;
+
+  MediaService({
+    ImagePicker? imagePicker,
+    AudioRecorder? audioRecorder,
+    AudioPlayer? audioPlayer,
+  })  : _imagePicker = imagePicker ?? ImagePicker(),
+        _audioRecorder = audioRecorder ?? AudioRecorder(),
+        _audioPlayer = audioPlayer ?? AudioPlayer();
+
+  /// Requests Camera Permission.
+  Future<bool> requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    return status.isGranted;
+  }
+
+  /// Requests Microphone Permission.
+  Future<bool> requestMicrophonePermission() async {
+    final status = await Permission.microphone.request();
+    return status.isGranted;
+  }
+
+  /// Requests Gallery/Storage Permission.
+  Future<bool> requestStoragePermission() async {
+    if (Platform.isIOS) {
+      final status = await Permission.photos.request();
+      return status.isGranted;
+    } else if (Platform.isAndroid) {
+      final status = await Permission.photos.request();
+      if (status.isGranted) return true;
+      
+      final storageStatus = await Permission.storage.request();
+      return storageStatus.isGranted;
+    }
+    return true;
+  }
+
+  /// Picks an image from camera or gallery.
+  Future<File?> pickImage(ImageSource source) async {
+    final XFile? pickedFile = await _imagePicker.pickImage(source: source);
+    if (pickedFile == null) return null;
+    return File(pickedFile.path);
+  }
+
+  /// Compresses the image to target size (max 1920px, 85% quality).
+  Future<File?> compressImage(File imageFile) async {
+    final tempDir = await getTemporaryDirectory();
+    final targetPath = p.join(
+      tempDir.path,
+      'compressed_${DateTime.now().millisecondsSinceEpoch}${p.extension(imageFile.path)}',
+    );
+
+    final XFile? compressedXFile = await FlutterImageCompress.compressAndGetFile(
+      imageFile.absolute.path,
+      targetPath,
+      minWidth: 1920,
+      minHeight: 1920,
+      quality: 85,
+    );
+
+    if (compressedXFile == null) return null;
+    return File(compressedXFile.path);
+  }
+
+  /// Starts recording audio, saving it to a temporary AAC/M4A file.
+  Future<void> startRecording() async {
+    if (await _audioRecorder.hasPermission()) {
+      final tempDir = await getTemporaryDirectory();
+      final filePath = p.join(
+        tempDir.path,
+        'audio_record_${DateTime.now().millisecondsSinceEpoch}.m4a',
+      );
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          sampleRate: 44100,
+          numChannels: 1,
+        ),
+        path: filePath,
+      );
+    } else {
+      throw Exception("Microphone permission not granted");
+    }
+  }
+
+  /// Stops recording and returns the raw file bytes.
+  Future<Uint8List?> stopRecording() async {
+    final path = await _audioRecorder.stop();
+    if (path == null) return null;
+
+    final file = File(path);
+    if (await file.exists()) {
+      return await file.readAsBytes();
+    }
+    return null;
+  }
+
+  /// Plays a given local audio file.
+  Future<void> playAudio(String filePath) async {
+    await _audioPlayer.setFilePath(filePath);
+    await _audioPlayer.play();
+  }
+
+  /// Stops playback.
+  Future<void> stopAudio() async {
+    await _audioPlayer.stop();
+  }
+
+  /// Disposes resources.
+  void dispose() {
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+  }
+}

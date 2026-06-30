@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/features/auth/presentation/splash_screen.dart';
 import 'package:vybin/features/auth/presentation/login_screen.dart';
 import 'package:vybin/features/auth/presentation/signup_screen.dart';
+import 'package:vybin/features/auth/presentation/forgot_password_screen.dart';
+import 'package:vybin/features/chat/bloc/chat_list_bloc.dart';
+import 'package:vybin/features/chat/bloc/chat_list_event.dart';
 import 'package:vybin/features/chat/presentation/chat_list_screen.dart';
 import 'package:vybin/features/chat/presentation/individual_chat_screen.dart';
+import 'package:vybin/features/chat/presentation/new_chat_screen.dart';
+import 'package:vybin/features/profile/presentation/own_profile_screen.dart';
+import 'package:vybin/features/settings/presentation/settings_screen.dart';
 
 /// Helper to convert BLoC stream updates into a [Listenable] for [GoRouter].
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -37,10 +44,12 @@ class AppRouter {
       redirect: (context, state) {
         final authState = authBloc.state;
 
-        final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+        final isLoggingIn = state.matchedLocation == '/login' ||
+            state.matchedLocation == '/signup' ||
+            state.matchedLocation == '/forgot-password';
         final isSplash = state.matchedLocation == '/';
 
-        if (authState is AuthInitializing) {
+        if (authState is AuthInitial) {
           // If initializing, keep user on splash screen
           return isSplash ? null : '/';
         }
@@ -71,8 +80,15 @@ class AppRouter {
           builder: (context, state) => const SignUpScreen(),
         ),
         GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
           path: '/chats',
-          builder: (context, state) => const ChatListScreen(),
+          builder: (context, state) => BlocProvider(
+            create: (context) => ChatListBloc()..add(LoadConversations()),
+            child: const ChatListScreen(),
+          ),
         ),
         GoRoute(
           path: '/chat/:id',
@@ -85,6 +101,18 @@ class AppRouter {
               contactAvatarInitials: extra['contactAvatarInitials'] ?? '?',
             );
           },
+        ),
+        GoRoute(
+          path: '/new-chat',
+          builder: (context, state) => const NewChatScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const OwnProfileScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
     );
