@@ -390,12 +390,59 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> with Single
             )
           ],
         ),
-        child: Text(
-          message.plaintext ?? '',
-          style: VybinTheme.messageText,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message.plaintext ?? '',
+              style: VybinTheme.messageText.copyWith(
+                color: isMe ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatTime(message.timestamp),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white.withOpacity(0.7) : VybinTheme.secondaryText,
+                  ),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  _buildStatusTicks(message.status),
+                ],
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _buildStatusTicks(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = VybinTheme.neonBlue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = Colors.white60;
+    } else {
+      icon = Icons.done;
+      color = Colors.white60;
+    }
+    return Icon(icon, size: 14, color: color);
   }
 
   Widget _buildInputZone() {
