@@ -111,6 +111,131 @@ class EncryptionService {
     );
   }
 
+  /// Encodes an [RSAPublicKey] to PKCS#1 PEM string.
+  String encodePublicKeyToPem(RSAPublicKey publicKey) {
+    final modulus = publicKey.modulus!;
+    final exponent = publicKey.exponent!;
+
+    final modulusBytes = _encodeBigInt(modulus);
+    final exponentBytes = _encodeBigInt(exponent);
+
+    final modulusAsn1 = _encodeAsn1Integer(modulusBytes);
+    final exponentAsn1 = _encodeAsn1Integer(exponentBytes);
+
+    final sequenceBytes = Uint8List.fromList([...modulusAsn1, ...exponentAsn1]);
+    final sequenceAsn1 = _encodeAsn1Sequence(sequenceBytes);
+
+    final base64String = base64Encode(sequenceAsn1);
+
+    final chunks = [];
+    for (var i = 0; i < base64String.length; i += 64) {
+      chunks.add(base64String.substring(i, min(i + 64, base64String.length)));
+    }
+
+    return '-----BEGIN RSA PUBLIC KEY-----\n${chunks.join('\n')}\n-----END RSA PUBLIC KEY-----';
+  }
+
+  /// Decodes a PKCS#1 PEM string back to [RSAPublicKey].
+  RSAPublicKey decodePublicKeyFromPem(String pem) {
+    final lines = pem.split('\n');
+    final base64Lines = lines.where((line) => !line.startsWith('-----')).join();
+    final bytes = base64Decode(base64Lines);
+
+    var offset = 0;
+
+    if (bytes[offset++] != 0x30) throw Exception('Invalid PEM: Not a sequence');
+    offset = _skipAsn1Length(bytes, offset);
+
+    if (bytes[offset++] != 0x02) throw Exception('Invalid PEM: Modulus not an integer');
+    final modLen = _parseAsn1Length(bytes, offset);
+    offset = _skipAsn1LengthBytes(bytes, offset);
+    final modBytes = bytes.sublist(offset, offset + modLen);
+    offset += modLen;
+    final modulus = _parseBigInt(modBytes);
+
+    if (bytes[offset++] != 0x02) throw Exception('Invalid PEM: Exponent not an integer');
+    final expLen = _parseAsn1Length(bytes, offset);
+    offset = _skipAsn1LengthBytes(bytes, offset);
+    final expBytes = bytes.sublist(offset, offset + expLen);
+    final exponent = _parseBigInt(expBytes);
+
+    return RSAPublicKey(modulus, exponent);
+  }
+
+  Uint8List _encodeBigInt(BigInt number) {
+    var hex = number.toRadixString(16);
+    if (hex.length % 2 != 0) {
+      hex = '0$hex';
+    }
+    final bytes = Uint8List(hex.length ~/ 2);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    if (bytes.isNotEmpty && (bytes[0] & 0x80) != 0) {
+      final padded = Uint8List(bytes.length + 1);
+      padded[0] = 0x00;
+      padded.setAll(1, bytes);
+      return padded;
+    }
+    return bytes;
+  }
+
+  Uint8List _encodeAsn1Length(int length) {
+    if (length < 128) {
+      return Uint8List.fromList([length]);
+    }
+    final lengthBytes = <int>[];
+    var temp = length;
+    while (temp > 0) {
+      lengthBytes.insert(0, temp & 0xFF);
+      temp >>= 8;
+    }
+    return Uint8List.fromList([0x80 | lengthBytes.length, ...lengthBytes]);
+  }
+
+  Uint8List _encodeAsn1Integer(Uint8List value) {
+    final lenBytes = _encodeAsn1Length(value.length);
+    return Uint8List.fromList([0x02, ...lenBytes, ...value]);
+  }
+
+  Uint8List _encodeAsn1Sequence(Uint8List value) {
+    final lenBytes = _encodeAsn1Length(value.length);
+    return Uint8List.fromList([0x30, ...lenBytes, ...value]);
+  }
+
+  int _parseAsn1Length(Uint8List bytes, int offset) {
+    final first = bytes[offset];
+    if ((first & 0x80) == 0) {
+      return first;
+    }
+    final lenBytesCount = first & 0x7F;
+    var length = 0;
+    for (var i = 0; i < lenBytesCount; i++) {
+      length = (length << 8) | bytes[offset + 1 + i];
+    }
+    return length;
+  }
+
+  int _skipAsn1Length(Uint8List bytes, int offset) {
+    final first = bytes[offset];
+    if ((first & 0x80) == 0) {
+      return offset + 1;
+    }
+    return offset + 1 + (first & 0x7F);
+  }
+
+  int _skipAsn1LengthBytes(Uint8List bytes, int offset) {
+    return _skipAsn1Length(bytes, offset);
+  }
+
+  BigInt _parseBigInt(Uint8List bytes) {
+    var hex = '';
+    for (final b in bytes) {
+      hex += b.toRadixString(16).padLeft(2, '0');
+    }
+    return BigInt.parse(hex, radix: 16);
+  }
+
   static SecureRandom _getSecureRandom() {
     final secureRandom = FortunaRandom();
     final random = Random.secure();

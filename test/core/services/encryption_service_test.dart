@@ -99,5 +99,18 @@ void main() {
       expect(encryptionService.privateKey, isNull);
       expect(encryptionService.publicKey, isNull);
     });
+
+    test('encodePublicKeyToPem and decodePublicKeyFromPem restores public key', () async {
+      final pair = await encryptionService.generateKeyPair();
+      final pubKey = pair.publicKey;
+
+      final pem = encryptionService.encodePublicKeyToPem(pubKey);
+      expect(pem, startsWith('-----BEGIN RSA PUBLIC KEY-----'));
+      expect(pem, endsWith('-----END RSA PUBLIC KEY-----'));
+
+      final restoredPubKey = encryptionService.decodePublicKeyFromPem(pem);
+      expect(restoredPubKey.modulus, equals(pubKey.modulus));
+      expect(restoredPubKey.exponent, equals(pubKey.exponent));
+    });
   });
 }

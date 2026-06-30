@@ -1,8 +1,34 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vybin/app.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
+import 'package:vybin/features/auth/data/auth_repository.dart';
+import 'package:vybin/shared/models/user_model.dart';
+
+class MockAuthRepository implements AuthRepository {
+  @override
+  Future<UserModel?> getCurrentUser() async => null;
+
+  @override
+  Future<UserModel> login({required String email, required String password}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserModel> signUp({
+    required String displayName,
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> logout() async {}
+}
 
 void main() {
   setUp(() {
@@ -13,7 +39,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       BlocProvider(
-        create: (context) => AuthBloc(),
+        create: (context) => AuthBloc(authRepository: MockAuthRepository()),
         child: const VybinApp(isFirstLaunch: false),
       ),
     );
@@ -29,7 +55,7 @@ void main() {
     // Build our app with first launch = true
     await tester.pumpWidget(
       BlocProvider(
-        create: (context) => AuthBloc(),
+        create: (context) => AuthBloc(authRepository: MockAuthRepository()),
         child: const VybinApp(isFirstLaunch: true),
       ),
     );
