@@ -13,6 +13,9 @@ class MessageModel extends Equatable {
   final String ciphertext; // base64(AES-256-GCM encrypted content)
   final Map<String, String> encryptedKeys; // Map of uid -> base64(RSA-OAEP encrypted AES key)
   
+  // Transient fields (not serialized to Firestore)
+  final String? plaintext; // Decrypted message content
+  
   // Status tracking
   final String status; // 'sent' | 'delivered' | 'read' | 'failed'
   final DateTime? deliveredAt;
@@ -39,6 +42,7 @@ class MessageModel extends Equatable {
     required this.iv,
     required this.ciphertext,
     required this.encryptedKeys,
+    this.plaintext,
     required this.status,
     this.deliveredAt,
     this.readAt,
@@ -132,6 +136,7 @@ class MessageModel extends Equatable {
     String? iv,
     String? ciphertext,
     Map<String, String>? encryptedKeys,
+    String? Function()? plaintext,
     String? status,
     DateTime? Function()? deliveredAt,
     DateTime? Function()? readAt,
@@ -153,6 +158,7 @@ class MessageModel extends Equatable {
       iv: iv ?? this.iv,
       ciphertext: ciphertext ?? this.ciphertext,
       encryptedKeys: encryptedKeys ?? this.encryptedKeys,
+      plaintext: plaintext != null ? plaintext() : this.plaintext,
       status: status ?? this.status,
       deliveredAt: deliveredAt != null ? deliveredAt() : this.deliveredAt,
       readAt: readAt != null ? readAt() : this.readAt,
@@ -177,6 +183,7 @@ class MessageModel extends Equatable {
         iv,
         ciphertext,
         encryptedKeys,
+        plaintext,
         status,
         deliveredAt,
         readAt,

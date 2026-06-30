@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
+import 'package:vybin/shared/models/user_model.dart';
 
 abstract class ChatListState extends Equatable {
   const ChatListState();
@@ -14,11 +15,12 @@ class ChatListLoading extends ChatListState {}
 
 class ChatListLoaded extends ChatListState {
   final List<ConversationModel> conversations;
+  final Map<String, UserModel> participants;
 
-  const ChatListLoaded(this.conversations);
+  const ChatListLoaded(this.conversations, this.participants);
 
   @override
-  List<Object?> get props => [conversations];
+  List<Object?> get props => [conversations, participants];
 }
 
 class ChatListError extends ChatListState {

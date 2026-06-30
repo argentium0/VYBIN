@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vybin/features/auth/bloc/auth_bloc.dart';
+import 'package:vybin/features/auth/bloc/auth_state.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 import 'package:vybin/shared/models/user_model.dart';
 
@@ -32,60 +36,30 @@ class _NewChatScreenState extends State<NewChatScreen> {
       _foundUser = null;
     });
 
-    // Simulate directory delay
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      final chatRepo = context.read<ChatRepository>();
+      final user = await chatRepo.searchUserByUsername(text);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _searchingUser = false;
-      if (text == 'alice_vybin' || text == 'alice') {
-        _foundUser = UserModel(
-          uid: 'alice_uid',
-          username: 'alice_vybin',
-          displayName: 'Abdulahad',
-          email: 'alice@example.com',
-          publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu...',
-          onlineStatus: 'online',
-          lastSeen: DateTime.now(),
-          about: 'Vibing securely',
-          createdAt: DateTime.now(),
-          blockedUids: const [],
-        );
-        _searchFeedback = 'User found in directory!';
-      } else if (text == 'bob_d' || text == 'bob') {
-        _foundUser = UserModel(
-          uid: 'bob_uid',
-          username: 'bob_d',
-          displayName: 'Bro',
-          email: 'bob@example.com',
-          publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv...',
-          onlineStatus: 'offline',
-          lastSeen: DateTime.now().subtract(const Duration(minutes: 5)),
-          about: 'Hey, I am using VYBIN',
-          createdAt: DateTime.now(),
-          blockedUids: const [],
-        );
-        _searchFeedback = 'User found in directory!';
-      } else if (text == 'charlie_b' || text == 'charlie') {
-        _foundUser = UserModel(
-          uid: 'charlie_uid',
-          username: 'charlie_b',
-          displayName: 'Hanzala Abid',
-          email: 'charlie@example.com',
-          publicKey: '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw...',
-          onlineStatus: 'offline',
-          lastSeen: DateTime.now().subtract(const Duration(days: 2)),
-          about: 'Verify public keys locally.',
-          createdAt: DateTime.now(),
-          blockedUids: const [],
-        );
-        _searchFeedback = 'User found in directory!';
-      } else {
+      setState(() {
+        _searchingUser = false;
+        if (user != null) {
+          _foundUser = user;
+          _searchFeedback = 'User found in directory!';
+        } else {
+          _foundUser = null;
+          _searchFeedback = 'No cryptographic identity found for @$text';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _searchingUser = false;
         _foundUser = null;
-        _searchFeedback = 'No cryptographic identity found for @$text';
-      }
-    });
+        _searchFeedback = 'Error searching directory: $e';
+      });
+    }
   }
 
   @override
@@ -225,15 +199,35 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () {
-                          context.pop(); // Close search page
-                          context.push(
-                            '/chat/${_foundUser!.username}',
-                            extra: {
-                              'contactName': _foundUser!.displayName,
-                              'contactAvatarInitials': _foundUser!.displayName.substring(0, 2).toUpperCase(),
-                            },
-                          );
+                        onPressed: () async {
+                          final authState = context.read<AuthBloc>().state;
+                          if (authState is AuthAuthenticated) {
+                            final myUid = authState.user.uid;
+                            final otherUid = _foundUser!.uid;
+                            final chatRepo = context.read<ChatRepository>();
+
+                            final conversationId = chatRepo.generateConversationId(myUid, otherUid);
+                            
+                            await chatRepo.createConversation(
+                              conversationId: conversationId,
+                              participantUids: [myUid, otherUid],
+                            );
+
+                            if (mounted) {
+                              context.pop(); // Close search page
+                              context.push(
+                                '/chat/$conversationId',
+                                extra: {
+                                  'contactName': _foundUser!.displayName,
+                                  'contactAvatarInitials': _foundUser!.displayName.substring(0, 2).toUpperCase(),
+                                },
+                              );
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('You must be logged in to start a conversation.')),
+                            );
+                          }
                         },
                         child: const Text(
                           'Message',

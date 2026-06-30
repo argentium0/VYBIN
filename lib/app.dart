@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -29,10 +30,32 @@ class _VybinAppState extends State<VybinApp> {
     final authBloc = context.read<AuthBloc>();
     _router = AppRouter.createRouter(authBloc);
 
+    // Listen to notification taps when app is in the background
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _handleNotificationRoute(message);
+    });
+
+    // Check if the app was opened from a terminated state via a notification
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        _handleNotificationRoute(message);
+      }
+    });
+
     SharedPreferences.getInstance().then((prefs) {
       final showStatus = prefs.getBool('show_activity_status') ?? true;
       VybinApp.showActivityStatusNotifier.value = showStatus;
     });
+  }
+
+  void _handleNotificationRoute(RemoteMessage message) {
+    final conversationId = message.data['conversationId'] as String?;
+    if (conversationId != null && conversationId.isNotEmpty) {
+      _router.push('/chat/$conversationId', extra: {
+        'contactName': message.data['contactName'] ?? 'Secure Chat',
+        'contactAvatarInitials': message.data['contactAvatarInitials'] ?? '🔒',
+      });
+    }
   }
 
   @override

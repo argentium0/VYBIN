@@ -10,6 +10,7 @@ import 'package:vybin/features/auth/presentation/signup_screen.dart';
 import 'package:vybin/features/auth/presentation/forgot_password_screen.dart';
 import 'package:vybin/features/chat/bloc/chat_list_bloc.dart';
 import 'package:vybin/features/chat/bloc/chat_list_event.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/features/chat/presentation/chat_list_screen.dart';
 import 'package:vybin/features/chat/presentation/individual_chat_screen.dart';
 import 'package:vybin/features/chat/presentation/new_chat_screen.dart';
@@ -85,10 +86,18 @@ class AppRouter {
         ),
         GoRoute(
           path: '/chats',
-          builder: (context, state) => BlocProvider(
-            create: (context) => ChatListBloc()..add(LoadConversations()),
-            child: const ChatListScreen(),
-          ),
+          builder: (context, state) {
+            final authState = context.read<AuthBloc>().state;
+            final currentUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+            final chatRepository = context.read<ChatRepository>();
+            return BlocProvider(
+              create: (context) => ChatListBloc(
+                chatRepository: chatRepository,
+                currentUid: currentUid,
+              )..add(LoadConversations()),
+              child: const ChatListScreen(),
+            );
+          },
         ),
         GoRoute(
           path: '/chat/:id',

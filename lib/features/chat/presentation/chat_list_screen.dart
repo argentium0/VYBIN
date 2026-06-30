@@ -64,10 +64,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.dispose();
   }
 
-  Widget _buildChatsView(List<ConversationModel> conversations) {
+  Widget _buildChatsView(
+    List<ConversationModel> conversations,
+    Map<String, UserModel> participants,
+  ) {
+    final authState = context.read<AuthBloc>().state;
+    final myUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+
     final filteredConversations = conversations.where((conv) {
       if (!_isSearching) return true;
       final query = _searchController.text.toLowerCase();
+      final otherUid = conv.participantUids.firstWhere(
+        (uid) => uid != myUid,
+        orElse: () => '',
+      );
+      final contactUser = participants[otherUid];
+      if (contactUser != null) {
+        return contactUser.displayName.toLowerCase().contains(query) ||
+            contactUser.username.toLowerCase().contains(query);
+      }
       final contact = getContactDetails(conv.conversationId);
       return contact.displayName.toLowerCase().contains(query) ||
           contact.username.toLowerCase().contains(query);
@@ -108,18 +123,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
       );
     }
 
-    final authState = context.read<AuthBloc>().state;
-    final myUid = authState is AuthAuthenticated
-        ? authState.user.uid
-        : 'my_uid_123';
-
     return ListView.separated(
       itemCount: filteredConversations.length,
       separatorBuilder: (context, index) =>
           const Divider(color: VybinTheme.dividerCharcoal, indent: 80),
       itemBuilder: (context, index) {
         final conv = filteredConversations[index];
+        final otherUid = conv.participantUids.firstWhere(
+          (uid) => uid != myUid,
+          orElse: () => '',
+        );
+        final contactUser = participants[otherUid];
         final contact = getContactDetails(conv.conversationId);
+
+        final displayName = contactUser?.displayName ?? contact.displayName;
+        final avatarInitials = contactUser != null
+            ? (contactUser.displayName.length >= 2
+                ? contactUser.displayName.substring(0, 2).toUpperCase()
+                : contactUser.displayName.toUpperCase())
+            : contact.avatarInitials;
+
         final unread = conv.unreadCount[myUid] ?? 0;
         final hasLastMessage = conv.lastMessagePreview != null;
         final lastMessageText = hasLastMessage
@@ -137,7 +160,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             radius: 26,
             backgroundColor: VybinTheme.whatsappTeal,
             child: Text(
-              contact.avatarInitials,
+              avatarInitials,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -146,7 +169,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ),
           title: Text(
-            contact.displayName,
+            displayName,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -209,10 +232,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
           onTap: () {
             context.push(
-              '/chat/${contact.username}',
+              '/chat/${conv.conversationId}',
               extra: {
-                'contactName': contact.displayName,
-                'contactAvatarInitials': contact.avatarInitials,
+                'contactName': displayName,
+                'contactAvatarInitials': avatarInitials,
               },
             );
           },
@@ -448,7 +471,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
             );
           } else if (state is ChatListLoaded) {
-            return _buildChatsView(state.conversations);
+            return _buildChatsView(state.conversations, state.participants);
           }
           return const SizedBox.shrink();
         },

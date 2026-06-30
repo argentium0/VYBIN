@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "459709003792",
+    "project_id": "vybin-firebase",
+    "storage_bucket": "vybin-firebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:459709003792:android:a87ed461a6229b07573295",
+        "android_client_info": {
+          "package_name": "com.example.vybin.vybin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfezu7wtc6gtZDE-RRkp3_VVYPRyqUZdw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,11 +1,22 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
+import 'package:vybin/shared/models/user_model.dart';
 import 'chat_list_event.dart';
 import 'chat_list_state.dart';
 
 class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
-  ChatListBloc() : super(ChatListInitial()) {
+  final ChatRepository _chatRepository;
+  final String _currentUid;
+  StreamSubscription<List<ConversationModel>>? _conversationsSubscription;
+
+  ChatListBloc({
+    required ChatRepository chatRepository,
+    required String currentUid,
+  })  : _chatRepository = chatRepository,
+        _currentUid = currentUid,
+        super(ChatListInitial()) {
     on<LoadConversations>(_onLoadConversations);
     on<UpdateConversations>(_onUpdateConversations);
   }
@@ -16,67 +27,44 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
   ) async {
     emit(ChatListLoading());
 
-    // Simulate database/Firestore loading delay
-    await Future.delayed(const Duration(milliseconds: 600));
+    await _conversationsSubscription?.cancel();
+    _conversationsSubscription = _chatRepository
+        .getConversationsStream(_currentUid)
+        .listen((conversations) async {
+      final participants = <String, UserModel>{};
+      for (final conv in conversations) {
+        final otherUid = conv.participantUids.firstWhere(
+          (uid) => uid != _currentUid,
+          orElse: () => '',
+        );
+        if (otherUid.isNotEmpty && !participants.containsKey(otherUid)) {
+          final user = await _chatRepository.getUserById(otherUid);
+          if (user != null) {
+            participants[otherUid] = user;
+          }
+        }
+      }
 
-    final mockConversations = [
-      ConversationModel(
-        conversationId: 'alice_vybin',
-        participantUids: const ['my_uid_123', 'alice_uid'],
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        lastMessageAt: DateTime.now().subtract(const Duration(minutes: 25)),
-        unreadCount: const {'my_uid_123': 2, 'alice_uid': 0},
-        mutedBy: const [],
-        deletedBy: const [],
-        lastMessagePreview: const LastMessagePreview(
-          senderUid: 'alice_uid',
-          type: 'text',
-          iv: 'mock_iv_base64',
-          ciphertext: '🔒 Hey there! Did you get the key?',
-          encryptedKeys: {},
-        ),
-      ),
-      ConversationModel(
-        conversationId: 'bob_d',
-        participantUids: const ['my_uid_123', 'bob_uid'],
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        lastMessageAt: DateTime.now().subtract(const Duration(days: 1)),
-        unreadCount: const {'my_uid_123': 0, 'bob_uid': 0},
-        mutedBy: const [],
-        deletedBy: const [],
-        lastMessagePreview: const LastMessagePreview(
-          senderUid: 'bob_uid',
-          type: 'text',
-          iv: 'mock_iv_base64',
-          ciphertext: '🔒 AES-GCM session key generated successfully.',
-          encryptedKeys: {},
-        ),
-      ),
-      ConversationModel(
-        conversationId: 'charlie_b',
-        participantUids: const ['my_uid_123', 'charlie_uid'],
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        lastMessageAt: DateTime.now().subtract(const Duration(days: 2)),
-        unreadCount: const {'my_uid_123': 0, 'charlie_uid': 0},
-        mutedBy: const [],
-        deletedBy: const [],
-        lastMessagePreview: const LastMessagePreview(
-          senderUid: 'charlie_uid',
-          type: 'text',
-          iv: 'mock_iv_base64',
-          ciphertext: '🔒 Let\'s verify our RSA public keys.',
-          encryptedKeys: {},
-        ),
-      ),
-    ];
-
-    emit(ChatListLoaded(mockConversations));
+      if (!isClosed) {
+        add(UpdateConversations(conversations, participants));
+      }
+    }, onError: (Object error) {
+      if (!isClosed) {
+        emit(ChatListError(error.toString()));
+      }
+    });
   }
 
   void _onUpdateConversations(
     UpdateConversations event,
     Emitter<ChatListState> emit,
   ) {
-    emit(ChatListLoaded(event.conversations));
+    emit(ChatListLoaded(event.conversations, event.participants));
+  }
+
+  @override
+  Future<void> close() {
+    _conversationsSubscription?.cancel();
+    return super.close();
   }
 }

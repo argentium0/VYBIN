@@ -132,6 +132,15 @@ class MediaService {
     await _audioPlayer.stop();
   }
 
+  /// Reads and returns the bytes of a file at the given local path.
+  Future<Uint8List> getMediaBytes(String path) async {
+    final file = File(path);
+    if (!await file.exists()) {
+      throw Exception('File does not exist at path: $path');
+    }
+    return await file.readAsBytes();
+  }
+
   /// Disposes resources.
   void dispose() {
     _audioRecorder.dispose();

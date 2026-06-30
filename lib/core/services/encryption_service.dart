@@ -162,6 +162,181 @@ class EncryptionService {
     return RSAPublicKey(modulus, exponent);
   }
 
+  /// Encrypts a message using AES-256-GCM and encrypts the AES session key using RSA-OAEP
+  /// for both the recipient and the sender.
+  Map<String, dynamic> encryptMessage({
+    required String plaintext,
+    required String recipientUid,
+    required String recipientPubKeyPEM,
+    required String senderUid,
+    required String senderPubKeyPEM,
+  }) {
+    final secureRandom = _getSecureRandom();
+    final aesKey = secureRandom.nextBytes(32);
+    final iv = secureRandom.nextBytes(12);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        true,
+        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+      );
+
+    final plaintextBytes = utf8.encode(plaintext);
+    final ciphertextBytes = cipher.process(Uint8List.fromList(plaintextBytes));
+    final ciphertextBase64 = base64Encode(ciphertextBytes);
+    final ivBase64 = base64Encode(iv);
+
+    // Encrypt AES key for recipient and sender
+    final recipientPubKey = decodePublicKeyFromPem(recipientPubKeyPEM);
+    final senderPubKey = decodePublicKeyFromPem(senderPubKeyPEM);
+
+    final oaepRecipient = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(true, PublicKeyParameter<RSAPublicKey>(recipientPubKey));
+    final encryptedKeyRecipient = base64Encode(oaepRecipient.process(aesKey));
+
+    final oaepSender = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(true, PublicKeyParameter<RSAPublicKey>(senderPubKey));
+    final encryptedKeySender = base64Encode(oaepSender.process(aesKey));
+
+    return {
+      'ciphertext': ciphertextBase64,
+      'iv': ivBase64,
+      'encryptedKeys': {
+        recipientUid: encryptedKeyRecipient,
+        senderUid: encryptedKeySender,
+      },
+    };
+  }
+
+  /// Encrypts raw media bytes using a newly generated AES-256 session key.
+  /// Returns a map containing:
+  /// - 'encryptedBytes': Uint8List of encrypted content
+  /// - 'iv': base64 of GCM nonce
+  /// - 'aesKey': Uint8List session key (so we can use it to encrypt other payloads)
+  /// - 'encryptedKeys': Map of uid -> base64(RSA-OAEP encrypted AES key)
+  Map<String, dynamic> encryptMediaBytes({
+    required Uint8List rawBytes,
+    required String recipientUid,
+    required String recipientPubKeyPEM,
+    required String senderUid,
+    required String senderPubKeyPEM,
+  }) {
+    final secureRandom = _getSecureRandom();
+    final aesKey = secureRandom.nextBytes(32);
+    final iv = secureRandom.nextBytes(12);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        true,
+        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+      );
+
+    final encryptedBytes = cipher.process(rawBytes);
+
+    final recipientPubKey = decodePublicKeyFromPem(recipientPubKeyPEM);
+    final senderPubKey = decodePublicKeyFromPem(senderPubKeyPEM);
+
+    final oaepRecipient = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(true, PublicKeyParameter<RSAPublicKey>(recipientPubKey));
+    final encryptedKeyRecipient = base64Encode(oaepRecipient.process(aesKey));
+
+    final oaepSender = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(true, PublicKeyParameter<RSAPublicKey>(senderPubKey));
+    final encryptedKeySender = base64Encode(oaepSender.process(aesKey));
+
+    return {
+      'encryptedBytes': encryptedBytes,
+      'iv': base64Encode(iv),
+      'aesKey': aesKey,
+      'encryptedKeys': {
+        recipientUid: encryptedKeyRecipient,
+        senderUid: encryptedKeySender,
+      },
+    };
+  }
+
+  /// Decrypts raw media bytes using the session key decrypted with the local private key.
+  Uint8List decryptMediaBytes({
+    required Uint8List encryptedBytes,
+    required String ivBase64,
+    required String encryptedSessionKeyBase64,
+  }) {
+    if (_inMemoryPrivateKey == null) {
+      throw Exception('Private key not loaded in memory.');
+    }
+
+    final oaep = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
+    
+    final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
+    final aesKey = oaep.process(encryptedSessionKey);
+
+    final iv = base64Decode(ivBase64);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        false,
+        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+      );
+
+    return cipher.process(encryptedBytes);
+  }
+
+  /// Encrypts plaintext string using a pre-existing AES session key.
+  /// Returns a map with 'ciphertext' (base64) and 'iv' (base64).
+  Map<String, String> encryptPlaintextWithKey({
+    required String plaintext,
+    required Uint8List aesKey,
+  }) {
+    final secureRandom = _getSecureRandom();
+    final iv = secureRandom.nextBytes(12);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        true,
+        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+      );
+
+    final plaintextBytes = utf8.encode(plaintext);
+    final ciphertextBytes = cipher.process(Uint8List.fromList(plaintextBytes));
+
+    return {
+      'ciphertext': base64Encode(ciphertextBytes),
+      'iv': base64Encode(iv),
+    };
+  }
+
+  /// Decrypts a message using the in-memory private key.
+  String decryptMessage({
+    required String ciphertextBase64,
+    required String ivBase64,
+    required String encryptedSessionKeyBase64,
+  }) {
+    if (_inMemoryPrivateKey == null) {
+      throw Exception('Private key not loaded in memory.');
+    }
+
+    // Decrypt the session key
+    final oaep = OAEPEncoding.withSHA256(RSAEngine())
+      ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
+    
+    final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
+    final aesKey = oaep.process(encryptedSessionKey);
+
+    // Decrypt the message
+    final iv = base64Decode(ivBase64);
+    final ciphertextBytes = base64Decode(ciphertextBase64);
+
+    final cipher = GCMBlockCipher(AESEngine())
+      ..init(
+        false,
+        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+      );
+
+    final plaintextBytes = cipher.process(ciphertextBytes);
+    return utf8.decode(plaintextBytes);
+  }
+
   Uint8List _encodeBigInt(BigInt number) {
     var hex = number.toRadixString(16);
     if (hex.length % 2 != 0) {
