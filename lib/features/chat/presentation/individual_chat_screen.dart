@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:just_audio/just_audio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:vybin/shared/models/user_model.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/app.dart';
 import '../../../core/services/media_service.dart';
+import '../../../core/services/active_chat_tracker.dart';
 import '../../../shared/theme/vybin_theme.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
@@ -36,8 +39,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   final TextEditingController _messageController = TextEditingController();
   final MediaService _mediaService = MediaService();
 
-  // Temporary hardcoded sender UID for MVP
-  final String _currentUserId = 'my_uid_123';
+  late final String _currentUserId;
+  late final String otherUid;
 
   // Audio recording local states
   bool _isRecording = false;
@@ -56,7 +59,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   @override
   void initState() {
     super.initState();
-    _chatBloc = ChatBloc()..add(LoadMessages(widget.conversationId));
+    _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'my_uid_123';
+    final uids = widget.conversationId.split('_');
+    otherUid = uids.firstWhere((uid) => uid != _currentUserId, orElse: () => '');
+
+    ActiveChatTracker.activeConversationId = widget.conversationId;
+    _chatBloc = ChatBloc(
+      chatRepository: context.read<ChatRepository>(),
+      currentUid: _currentUserId,
+    )..add(LoadMessages(widget.conversationId));
     _messageController.addListener(_onTextChanged);
 
     _micAnimationController = AnimationController(
@@ -70,6 +81,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   @override
   void dispose() {
+    ActiveChatTracker.activeConversationId = null;
     _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _micAnimationController.dispose();
@@ -324,15 +336,42 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: VybinApp.showActivityStatusNotifier,
-                    builder: (context, showStatus, _) {
-                      if (!showStatus) return const SizedBox.shrink();
-                      return Text(
-                        'online',
-                        style: VybinTheme.caption.copyWith(
-                          color: VybinTheme.whatsappGreen,
-                        ),
+                  StreamBuilder<UserModel?>(
+                    stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
+                    builder: (context, snapshot) {
+                      final user = snapshot.data;
+                      final statusText = _formatPresence(user);
+                      final isOnline = user?.onlineStatus == 'online';
+
+                      return ValueListenableBuilder<bool>(
+                        valueListenable: VybinApp.showActivityStatusNotifier,
+                        builder: (context, showStatus, _) {
+                          if (!showStatus || statusText.isEmpty) return const SizedBox.shrink();
+
+                          return Row(
+                            children: [
+                              if (isOnline) ...[
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: VybinTheme.neonHighlight,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                statusText,
+                                style: VybinTheme.caption.copyWith(
+                                  color: isOnline 
+                                      ? VybinTheme.neonHighlight 
+                                      : VybinTheme.secondaryText,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
                   ),
@@ -341,7 +380,53 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             ],
           ),
           actions: [
-            IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              onSelected: (value) {
+                if (value == 'verify') {
+                  context.push(
+                    '/chat/${widget.conversationId}/verify',
+                    extra: {'contactName': widget.contactName},
+                  );
+                } else if (value == 'block') {
+                  _showBlockUserBottomSheet(context);
+                } else if (value == 'report') {
+                  _showReportChatBottomSheet(context);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'verify',
+                  child: Row(
+                    children: [
+                      Icon(Icons.verified_user_outlined, color: VybinTheme.neonHighlight),
+                      SizedBox(width: 8),
+                      Text('Verify Keys', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'block',
+                  child: Row(
+                    children: [
+                      Icon(Icons.block, color: VybinTheme.errorColor),
+                      SizedBox(width: 8),
+                      Text('Block User', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.report_problem_outlined, color: Colors.orangeAccent),
+                      SizedBox(width: 8),
+                      Text('Report Chat', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         body: Column(
@@ -443,7 +528,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   style: TextStyle(
                     fontSize: 10,
                     color: isMe
-                        ? Colors.white.withOpacity(0.7)
+                        ? Colors.white.withValues(alpha: 0.7)
                         : VybinTheme.secondaryText,
                   ),
                 ),
@@ -479,6 +564,24 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       color = Colors.white60;
     }
     return Icon(icon, size: 14, color: color);
+  }
+
+  String _formatPresence(UserModel? user) {
+    if (user == null) return '';
+    if (user.onlineStatus == 'online') {
+      return 'Online';
+    }
+
+    final difference = DateTime.now().difference(user.lastSeen);
+    if (difference.inMinutes < 1) {
+      return 'Active just now';
+    } else if (difference.inMinutes < 60) {
+      return 'Active ${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return 'Active ${difference.inHours}h ago';
+    } else {
+      return 'Active ${difference.inDays}d ago';
+    }
   }
 
   Widget _buildInputZone() {
@@ -688,6 +791,201 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             ),
           ),
       ],
+    );
+  }
+
+  void _showBlockUserBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: VybinTheme.cardCharcoal,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.block, color: VybinTheme.errorColor, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Block ${widget.contactName}?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Blocked users will not be able to send you messages, and their presence updates will be hidden from your feed.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: VybinTheme.secondaryText,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: VybinTheme.errorColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    Navigator.of(sheetContext).pop();
+                    try {
+                      final chatRepo = context.read<ChatRepository>();
+                      await chatRepo.blockUser(_currentUserId, otherUid);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${widget.contactName} blocked.')),
+                        );
+                        context.pop(); // Go back to chat list
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to block user: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Block User', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: VybinTheme.secondaryText),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showReportChatBottomSheet(BuildContext context) {
+    final commentController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: VybinTheme.cardCharcoal,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      builder: (BuildContext sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.report_problem_outlined, color: Colors.orangeAccent, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Report ${widget.contactName}?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Because VYBIN is strictly end-to-end encrypted, no message text will be sent to the server. Only infrastructural metadata (timestamps, handshakes) and your voluntary comment below will be forwarded.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: VybinTheme.secondaryText,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentController,
+                maxLength: 500,
+                maxLines: 3,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Voluntary comments (e.g. description of abuse)',
+                  labelStyle: TextStyle(color: VybinTheme.secondaryText),
+                  counterStyle: TextStyle(color: VybinTheme.secondaryText),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () async {
+                  final reason = commentController.text.trim();
+                  Navigator.of(sheetContext).pop();
+                  try {
+                    final chatRepo = context.read<ChatRepository>();
+                    await chatRepo.reportConversation(
+                      conversationId: widget.conversationId,
+                      reporterUid: _currentUserId,
+                      reportedUid: otherUid,
+                      reason: reason,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Chat report submitted successfully.')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to submit report: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Submit Report', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: VybinTheme.secondaryText),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -959,8 +1257,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: isMe
-                    ? Colors.white.withOpacity(0.2)
-                    : VybinTheme.whatsappTeal.withOpacity(0.2),
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : VybinTheme.whatsappTeal.withValues(alpha: 0.2),
                 child: Icon(
                   isPlayingThis
                       ? Icons.pause_rounded
@@ -1011,9 +1309,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                                     ? Colors.greenAccent
                                     : VybinTheme.whatsappGreen)
                               : (isMe
-                                    ? Colors.white.withOpacity(0.4)
-                                    : VybinTheme.secondaryText.withOpacity(
-                                        0.4,
+                                    ? Colors.white.withValues(alpha: 0.4)
+                                    : VybinTheme.secondaryText.withValues(
+                                        alpha: 0.4,
                                       )),
                           borderRadius: BorderRadius.circular(1.5),
                         ),

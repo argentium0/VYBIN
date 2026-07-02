@@ -142,8 +142,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: VybinTheme.errorColor.withOpacity(0.1),
-                    border: Border.all(color: VybinTheme.errorColor.withOpacity(0.5)),
+                    color: VybinTheme.errorColor.withValues(alpha: 0.1),
+                    border: Border.all(color: VybinTheme.errorColor.withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(

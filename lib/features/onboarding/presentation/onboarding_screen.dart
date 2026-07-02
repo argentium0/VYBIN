@@ -162,7 +162,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? VybinTheme.whatsappGreen
-                              : Colors.grey.withOpacity(0.5),
+                              : Colors.grey.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -179,7 +179,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: VybinTheme.whatsappGreen.withOpacity(0.3 + 0.2 * _animationController.value),
+                                    color: VybinTheme.whatsappGreen.withValues(alpha: 0.3 + 0.2 * _animationController.value),
                                     blurRadius: 10 + 5 * _animationController.value,
                                     spreadRadius: 1 + 2 * _animationController.value,
                                   ),
@@ -252,9 +252,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
             height: 140,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: VybinTheme.whatsappGreen.withOpacity(0.05),
+              color: VybinTheme.whatsappGreen.withValues(alpha: 0.05),
               border: Border.all(
-                color: VybinTheme.whatsappGreen.withOpacity(0.1 + 0.2 * _animationController.value),
+                color: VybinTheme.whatsappGreen.withValues(alpha: 0.1 + 0.2 * _animationController.value),
                 width: 2 + 2 * _animationController.value,
               ),
             ),
@@ -292,7 +292,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                   child: Icon(
                     Icons.enhanced_encryption,
                     size: 64,
-                    color: VybinTheme.whatsappGreen.withOpacity(0.85),
+                    color: VybinTheme.whatsappGreen.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -337,7 +337,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                   child: Icon(
                     Icons.rocket_launch,
                     size: 56,
-                    color: Colors.orangeAccent.withOpacity(0.8 + 0.2 * _animationController.value),
+                    color: Colors.orangeAccent.withValues(alpha: 0.8 + 0.2 * _animationController.value),
                   ),
                 );
               },

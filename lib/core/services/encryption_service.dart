@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
-import 'package:pointycastle/pointycastle.dart';
 
 class EncryptionService {
   RSAPrivateKey? _inMemoryPrivateKey;
@@ -34,8 +33,8 @@ class EncryptionService {
 
       final pair = keyGen.generateKeyPair();
       return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(
-        pair.publicKey as RSAPublicKey,
-        pair.privateKey as RSAPrivateKey,
+        pair.publicKey,
+        pair.privateKey,
       );
     });
   }
@@ -43,6 +42,28 @@ class EncryptionService {
   void loadKeyPair(AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> pair) {
     _inMemoryPublicKey = pair.publicKey;
     _inMemoryPrivateKey = pair.privateKey;
+  }
+
+  /// Serializes an RSAPrivateKey into a JSON string.
+  String serializePrivateKey(RSAPrivateKey privKey) {
+    final Map<String, dynamic> keyData = {
+      'n': privKey.modulus?.toRadixString(16),
+      'd': privKey.privateExponent?.toRadixString(16),
+      'p': privKey.p?.toRadixString(16),
+      'q': privKey.q?.toRadixString(16),
+    };
+    return jsonEncode(keyData);
+  }
+
+  /// Deserializes a JSON string into an RSAPrivateKey.
+  RSAPrivateKey deserializePrivateKey(String rawJson) {
+    final Map<String, dynamic> keyData = jsonDecode(rawJson);
+    return RSAPrivateKey(
+      BigInt.parse(keyData['n']!, radix: 16),
+      BigInt.parse(keyData['d']!, radix: 16),
+      BigInt.parse(keyData['p']!, radix: 16),
+      BigInt.parse(keyData['q']!, radix: 16),
+    );
   }
 
   /// Derives a 32-byte AES key from password and uid using PBKDF2.
@@ -143,17 +164,23 @@ class EncryptionService {
 
     var offset = 0;
 
-    if (bytes[offset++] != 0x30) throw Exception('Invalid PEM: Not a sequence');
+    if (bytes[offset++] != 0x30) {
+      throw Exception('Invalid PEM: Not a sequence');
+    }
     offset = _skipAsn1Length(bytes, offset);
 
-    if (bytes[offset++] != 0x02) throw Exception('Invalid PEM: Modulus not an integer');
+    if (bytes[offset++] != 0x02) {
+      throw Exception('Invalid PEM: Modulus not an integer');
+    }
     final modLen = _parseAsn1Length(bytes, offset);
     offset = _skipAsn1LengthBytes(bytes, offset);
     final modBytes = bytes.sublist(offset, offset + modLen);
     offset += modLen;
     final modulus = _parseBigInt(modBytes);
 
-    if (bytes[offset++] != 0x02) throw Exception('Invalid PEM: Exponent not an integer');
+    if (bytes[offset++] != 0x02) {
+      throw Exception('Invalid PEM: Exponent not an integer');
+    }
     final expLen = _parseAsn1Length(bytes, offset);
     offset = _skipAsn1LengthBytes(bytes, offset);
     final expBytes = bytes.sublist(offset, offset + expLen);
@@ -176,10 +203,7 @@ class EncryptionService {
     final iv = secureRandom.nextBytes(12);
 
     final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        true,
-        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
-      );
+      ..init(true, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
 
     final plaintextBytes = utf8.encode(plaintext);
     final ciphertextBytes = cipher.process(Uint8List.fromList(plaintextBytes));
@@ -226,10 +250,7 @@ class EncryptionService {
     final iv = secureRandom.nextBytes(12);
 
     final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        true,
-        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
-      );
+      ..init(true, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
 
     final encryptedBytes = cipher.process(rawBytes);
 
@@ -267,17 +288,15 @@ class EncryptionService {
 
     final oaep = OAEPEncoding.withSHA256(RSAEngine())
       ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
-    
+
     final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
     final aesKey = oaep.process(encryptedSessionKey);
 
     final iv = base64Decode(ivBase64);
 
-    final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        false,
-        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
-      );
+    final cipher = GCMBlockCipher(
+      AESEngine(),
+    )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
 
     return cipher.process(encryptedBytes);
   }
@@ -292,10 +311,7 @@ class EncryptionService {
     final iv = secureRandom.nextBytes(12);
 
     final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        true,
-        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
-      );
+      ..init(true, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
 
     final plaintextBytes = utf8.encode(plaintext);
     final ciphertextBytes = cipher.process(Uint8List.fromList(plaintextBytes));
@@ -319,7 +335,7 @@ class EncryptionService {
     // Decrypt the session key
     final oaep = OAEPEncoding.withSHA256(RSAEngine())
       ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
-    
+
     final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
     final aesKey = oaep.process(encryptedSessionKey);
 
@@ -327,11 +343,9 @@ class EncryptionService {
     final iv = base64Decode(ivBase64);
     final ciphertextBytes = base64Decode(ciphertextBase64);
 
-    final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        false,
-        AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
-      );
+    final cipher = GCMBlockCipher(
+      AESEngine(),
+    )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
 
     final plaintextBytes = cipher.process(ciphertextBytes);
     return utf8.decode(plaintextBytes);

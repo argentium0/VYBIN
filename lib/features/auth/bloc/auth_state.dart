@@ -36,3 +36,19 @@ class AuthError extends AuthState {
   @override
   List<Object?> get props => [errorMessage];
 }
+
+/// State representing an authenticated Firebase user who has not yet verified their email.
+class AuthEmailUnverified extends AuthState {
+  final UserModel user;
+  final String? verificationError;
+  final int timestamp;
+
+  const AuthEmailUnverified(
+    this.user, {
+    this.verificationError,
+    this.timestamp = 0,
+  });
+
+  @override
+  List<Object?> get props => [user, verificationError, timestamp];
+}

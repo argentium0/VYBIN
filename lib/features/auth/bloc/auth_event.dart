@@ -40,3 +40,22 @@ class SignUpRequested extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
+
+class CheckEmailVerificationRequested extends AuthEvent {}
+
+class ResendVerificationEmailRequested extends AuthEvent {}
+
+class UpdateProfileRequested extends AuthEvent {
+  final String displayName;
+  final String about;
+  final String? localPhotoPath;
+
+  const UpdateProfileRequested({
+    required this.displayName,
+    required this.about,
+    this.localPhotoPath,
+  });
+
+  @override
+  List<Object?> get props => [displayName, about, localPhotoPath];
+}

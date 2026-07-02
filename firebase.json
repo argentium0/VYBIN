@@ -1,1 +1,22 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"vybin-firebase","appId":"1:459709003792:android:a87ed461a6229b07573295","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"vybin-firebase","configurations":{"android":"1:459709003792:android:a87ed461a6229b07573295","ios":"1:459709003792:ios:3bbab77787c89495573295"}}}}}}
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "vybin-firebase",
+                    "appId": "1:459709003792:android:a87ed461a6229b07573295",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "vybin-firebase",
+                    "configurations": {
+                        "android": "1:459709003792:android:a87ed461a6229b07573295",
+                        "ios": "1:459709003792:ios:3bbab77787c89495573295"
+                    }
+                }
+            }
+        }
+    }
+}

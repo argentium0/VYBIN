@@ -10,10 +10,13 @@ import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/data/auth_repository.dart';
 import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/core/services/encryption_service.dart';
+import 'package:vybin/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService.initialize();
+  FirebaseMessaging.onBackgroundMessage(anonymizedBackgroundMessageHandler);
 
   // Request push notification permissions
   final messaging = FirebaseMessaging.instance;

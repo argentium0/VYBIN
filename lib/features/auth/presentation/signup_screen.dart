@@ -333,8 +333,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
-          } else if (state is AuthAuthenticated) {
-            // Contextual AlertDialog popup on simulated success
+          } else if (state is AuthEmailUnverified) {
+            // Contextual AlertDialog popup on success
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -369,11 +369,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
+                        'We have sent a verification email to:\n${state.user.email}\n\nPlease verify your email to access the app.\n\n'
                         'A cryptographically secure RSA-2048 public/private keypair has been generated on your device. '
-                        'Your private key is encrypted and stored locally in your keystore, while your public key has been registered on the server.\n\n'
-                        'Your communications are fully end-to-end encrypted.',
+                        'Your private key is encrypted and stored locally in your keystore, while your public key has been registered on the server.',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
                           fontSize: 14,
                         ),
                       ),
@@ -386,10 +386,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Enter VYBIN'),
+                      child: const Text('Verify Email'),
                       onPressed: () {
                         Navigator.of(context).pop(); // dismiss dialog
-                        context.go('/chats'); // route to chats
+                        context.go('/verify-email'); // route to verify-email
                       },
                     ),
                   ],

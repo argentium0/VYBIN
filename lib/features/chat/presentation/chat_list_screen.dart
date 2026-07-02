@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_event.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/features/chat/bloc/chat_list_bloc.dart';
-import 'package:vybin/features/chat/bloc/chat_list_event.dart';
+
 import 'package:vybin/features/chat/bloc/chat_list_state.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/user_model.dart';
@@ -134,6 +135,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
           orElse: () => '',
         );
         final contactUser = participants[otherUid];
+        if (contactUser != null) {
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setString('contact_${contactUser.uid}', contactUser.displayName);
+          });
+        }
         final contact = getContactDetails(conv.conversationId);
 
         final displayName = contactUser?.displayName ?? contact.displayName;
@@ -276,7 +282,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   hintStyle: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,

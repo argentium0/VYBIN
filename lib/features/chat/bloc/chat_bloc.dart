@@ -1,50 +1,139 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
+import 'package:vybin/shared/models/user_model.dart';
+import 'package:vybin/shared/models/message_model.dart';
 import '../models/message.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  final Uuid _uuid = const Uuid();
+  final ChatRepository _chatRepository;
+  final String _currentUid;
+  
+  StreamSubscription<List<MessageModel>>? _messagesSubscription;
+  UserModel? _senderUser;
+  UserModel? _recipientUser;
 
-  ChatBloc() : super(ChatInitial()) {
+  ChatBloc({
+    required ChatRepository chatRepository,
+    required String currentUid,
+  })  : _chatRepository = chatRepository,
+        _currentUid = currentUid,
+        super(ChatInitial()) {
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
     on<DeleteMessage>(_onDeleteMessage);
+    on<UpdateMessagesReceived>(_onUpdateMessagesReceived);
   }
 
-  void _onLoadMessages(LoadMessages event, Emitter<ChatState> emit) {
+  Future<void> _onLoadMessages(LoadMessages event, Emitter<ChatState> emit) async {
     emit(ChatLoading());
-    // Simulate loading messages from local storage or Firestore
-    // For MVP phase 1, we start with an empty list
-    emit(ChatLoaded(const [], event.conversationId));
+
+    final uids = event.conversationId.split('_');
+    final otherUid = uids.firstWhere((uid) => uid != _currentUid, orElse: () => '');
+
+    try {
+      _senderUser = await _chatRepository.getUserById(_currentUid);
+      _recipientUser = await _chatRepository.getUserById(otherUid);
+
+      await _messagesSubscription?.cancel();
+      _messagesSubscription = _chatRepository
+          .getMessagesStream(event.conversationId, _currentUid)
+          .listen((msgModels) {
+        final messages = msgModels.map(_mapModelToMessage).toList();
+        if (!isClosed) {
+          add(UpdateMessagesReceived(messages, event.conversationId));
+        }
+
+        // Whenever messages update, if there are unread messages from other user, mark as read
+        _chatRepository.markMessagesAsRead(
+          conversationId: event.conversationId,
+          myUid: _currentUid,
+        );
+      });
+
+      // Mark initially loaded messages as read
+      await _chatRepository.markMessagesAsRead(
+        conversationId: event.conversationId,
+        myUid: _currentUid,
+      );
+    } catch (e) {
+      emit(ChatError(e.toString()));
+    }
   }
 
-  void _onSendMessage(SendMessage event, Emitter<ChatState> emit) {
-    if (state is ChatLoaded) {
-      final currentState = state as ChatLoaded;
-      
-      final newMessage = Message(
-        messageId: _uuid.v4(),
-        senderUid: event.senderUid,
-        timestamp: DateTime.now(),
-        type: event.type,
-        plaintext: event.plaintext, // For UI rendering before encryption
-        status: 'sent',
-        mediaUrl: event.mediaUrl,
-      );
+  void _onUpdateMessagesReceived(UpdateMessagesReceived event, Emitter<ChatState> emit) {
+    emit(ChatLoaded(event.messages, event.conversationId));
+  }
 
-      final updatedMessages = List<Message>.from(currentState.messages)..insert(0, newMessage);
+  Future<void> _onSendMessage(SendMessage event, Emitter<ChatState> emit) async {
+    final currentState = state;
+    if (currentState is ChatLoaded) {
+      if (_senderUser == null || _recipientUser == null) {
+        emit(const ChatError('User profiles not fully loaded.'));
+        return;
+      }
 
-      emit(ChatLoaded(updatedMessages, currentState.conversationId));
+      try {
+        if (event.type == 'text') {
+          await _chatRepository.sendMessage(
+            conversationId: currentState.conversationId,
+            senderUid: _currentUid,
+            recipientUid: _recipientUser!.uid,
+            plaintext: event.plaintext,
+            senderPubKeyPEM: _senderUser!.publicKey,
+            recipientPubKeyPEM: _recipientUser!.publicKey,
+          );
+        } else if (event.type == 'voice' || event.type == 'image') {
+          await _chatRepository.sendMediaMessage(
+            conversationId: currentState.conversationId,
+            senderUid: _currentUid,
+            recipientUid: _recipientUser!.uid,
+            type: event.type,
+            localFilePath: event.mediaUrl!,
+            senderPubKeyPEM: _senderUser!.publicKey,
+            recipientPubKeyPEM: _recipientUser!.publicKey,
+          );
+        }
+      } catch (e) {
+        // Emit error or handle it gracefully
+      }
     }
   }
 
   void _onDeleteMessage(DeleteMessage event, Emitter<ChatState> emit) {
-    if (state is ChatLoaded) {
-      final currentState = state as ChatLoaded;
-      final updatedMessages = currentState.messages.where((m) => m.messageId != event.messageId).toList();
-      emit(ChatLoaded(updatedMessages, currentState.conversationId));
-    }
+    // Soft delete can be handled or ignored in local UI state for now
+  }
+
+  Message _mapModelToMessage(MessageModel model) {
+    return Message(
+      messageId: model.messageId,
+      senderUid: model.senderUid,
+      timestamp: model.timestamp,
+      type: model.type,
+      iv: model.iv,
+      ciphertext: model.ciphertext,
+      encryptedKeys: model.encryptedKeys,
+      plaintext: model.plaintext,
+      status: model.status,
+      deliveredAt: model.deliveredAt,
+      readAt: model.readAt,
+      mediaUrl: model.mediaUrl,
+      mediaIv: model.mediaIv,
+      mediaEncryptedKeys: model.mediaEncryptedKeys,
+      mediaSize: model.mediaSize,
+      mediaMimeType: model.mediaMimeType,
+      mediaOriginalFilename: model.mediaOriginalFilename,
+      deletedFor: model.deletedFor,
+      deletedForEveryone: model.deletedForEveryone,
+      deletedForEveryoneAt: model.deletedForEveryoneAt,
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _messagesSubscription?.cancel();
+    return super.close();
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -252,19 +253,44 @@ class ChatRepository {
     await batch.commit();
   }
 
-  /// Real-time stream of messages in a conversation, decrypted on the fly.
+  /// Real-time stream of messages in a conversation, decrypted on the fly and filtered by blocked users.
   Stream<List<MessageModel>> getMessagesStream(String conversationId, String myUid) {
-    return _firestore
+    final controller = StreamController<List<MessageModel>>();
+    List<String> blockedUids = [];
+    List<MessageModel> currentMessages = [];
+
+    StreamSubscription? blockedSub;
+    StreamSubscription? messagesSub;
+
+    void emitFiltered() {
+      if (controller.isClosed) return;
+      final filtered = currentMessages.where((msg) => !blockedUids.contains(msg.senderUid)).toList();
+      controller.add(filtered);
+    }
+
+    blockedSub = _firestore
+        .collection('users')
+        .doc(myUid)
+        .collection('blocked_users')
+        .snapshots()
+        .listen((snapshot) {
+      blockedUids = snapshot.docs.map((doc) => doc.id).toList();
+      emitFiltered();
+    }, onError: (err) {
+      if (!controller.isClosed) controller.addError(err);
+    });
+
+    messagesSub = _firestore
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
+        .listen((snapshot) {
+      currentMessages = snapshot.docs.map((doc) {
         final data = doc.data();
         var msg = MessageModel.fromJson(data);
-        
+
         try {
           final plaintext = _encryptionService.decryptMessage(
             ciphertextBase64: msg.ciphertext,
@@ -275,9 +301,169 @@ class ChatRepository {
         } catch (e) {
           msg = msg.copyWith(plaintext: () => 'Error decrypting message');
         }
-        
+
         return msg;
       }).toList();
+      emitFiltered();
+    }, onError: (err) {
+      if (!controller.isClosed) controller.addError(err);
+    });
+
+    controller.onCancel = () {
+      blockedSub?.cancel();
+      messagesSub?.cancel();
+    };
+
+    return controller.stream;
+  }
+
+  /// Real-time stream of a user's profile from Firestore, hiding presence details if they are blocked.
+  Stream<UserModel?> getUserStream(String uid, String myUid) {
+    final controller = StreamController<UserModel?>();
+    UserModel? currentUser;
+    bool isBlocked = false;
+
+    StreamSubscription? userSub;
+    StreamSubscription? blockedSub;
+
+    void emitFiltered() {
+      if (controller.isClosed) return;
+      if (isBlocked) {
+        if (currentUser != null) {
+          controller.add(currentUser!.copyWith(
+            onlineStatus: 'offline',
+            lastSeen: DateTime.fromMillisecondsSinceEpoch(0),
+          ));
+        } else {
+          controller.add(null);
+        }
+      } else {
+        controller.add(currentUser);
+      }
+    }
+
+    blockedSub = _firestore
+        .collection('users')
+        .doc(myUid)
+        .collection('blocked_users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      isBlocked = snapshot.exists;
+      emitFiltered();
+    }, onError: (err) {
+      if (!controller.isClosed) controller.addError(err);
+    });
+
+    userSub = _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        currentUser = UserModel.fromJson(snapshot.data()!);
+      } else {
+        currentUser = null;
+      }
+      emitFiltered();
+    }, onError: (err) {
+      if (!controller.isClosed) controller.addError(err);
+    });
+
+    controller.onCancel = () {
+      userSub?.cancel();
+      blockedSub?.cancel();
+    };
+
+    return controller.stream;
+  }
+
+  /// Updates a message's status to 'read' (or 'delivered') in Firestore.
+  Future<void> updateMessageStatus({
+    required String conversationId,
+    required String messageId,
+    required String status,
+  }) async {
+    final Map<String, dynamic> updates = {
+      'status': status,
+    };
+    if (status == 'read') {
+      updates['readAt'] = FieldValue.serverTimestamp();
+    } else if (status == 'delivered') {
+      updates['deliveredAt'] = FieldValue.serverTimestamp();
+    }
+    
+    await _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId)
+        .update(updates);
+  }
+
+  /// Marks all unread incoming messages in a conversation as read.
+  Future<void> markMessagesAsRead({
+    required String conversationId,
+    required String myUid,
+  }) async {
+    final query = await _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .where('status', whereIn: const ['sent', 'delivered'])
+        .get();
+
+    final batch = _firestore.batch();
+    var hasUpdates = false;
+
+    for (final doc in query.docs) {
+      if (doc.data()['senderUid'] != myUid) {
+        batch.update(doc.reference, {
+          'status': 'read',
+          'readAt': FieldValue.serverTimestamp(),
+        });
+        hasUpdates = true;
+      }
+    }
+
+    if (hasUpdates) {
+      await batch.commit();
+      
+      // Also update the unread count in conversation document to 0 for current user
+      await _firestore.collection('conversations').doc(conversationId).update({
+        'unreadCount.$myUid': 0,
+      });
+    }
+  }
+
+  /// Blocks a user by creating a document in users/{myUid}/blocked_users/{otherUid}.
+  Future<void> blockUser(String myUid, String otherUid) async {
+    await _firestore
+        .collection('users')
+        .doc(myUid)
+        .collection('blocked_users')
+        .doc(otherUid)
+        .set({
+      'blockedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Optional: Add to recipient's blocked list for symmetry or handle unidirectionally
+  }
+
+  /// Voluntarily reports a conversation using E2EE blind metadata (only handshakes and comments).
+  Future<void> reportConversation({
+    required String conversationId,
+    required String reporterUid,
+    required String reportedUid,
+    required String reason,
+  }) async {
+    await _firestore.collection('reports').add({
+      'conversationId': conversationId,
+      'reporterUid': reporterUid,
+      'reportedUid': reportedUid,
+      'reason': reason,
+      'timestamp': FieldValue.serverTimestamp(),
+      'type': 'metadata_only',
     });
   }
 }

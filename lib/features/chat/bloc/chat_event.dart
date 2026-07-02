@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../models/message.dart';
 
 abstract class ChatEvent extends Equatable {
   const ChatEvent();
@@ -40,4 +41,13 @@ class DeleteMessage extends ChatEvent {
 
   @override
   List<Object?> get props => [messageId];
+}
+
+class UpdateMessagesReceived extends ChatEvent {
+  final List<Message> messages;
+  final String conversationId;
+  const UpdateMessagesReceived(this.messages, this.conversationId);
+
+  @override
+  List<Object?> get props => [messages, conversationId];
 }

@@ -22,4 +22,21 @@ class SecureKeyStorage {
   Future<void> deleteEncryptedPrivateKey() async {
     await _storage.delete(key: _privateKeyKey);
   }
+
+  static const String _rawPrivateKeyKey = 'vybin_raw_private_key';
+
+  /// Persists the raw (decrypted) private key JSON to secure storage.
+  Future<void> writeRawPrivateKey(String rawKeyJson) async {
+    await _storage.write(key: _rawPrivateKeyKey, value: rawKeyJson);
+  }
+
+  /// Retrieves the raw (decrypted) private key JSON from secure storage.
+  Future<String?> readRawPrivateKey() async {
+    return await _storage.read(key: _rawPrivateKeyKey);
+  }
+
+  /// Deletes the raw (decrypted) private key JSON from secure storage.
+  Future<void> deleteRawPrivateKey() async {
+    await _storage.delete(key: _rawPrivateKeyKey);
+  }
 }

@@ -61,67 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showForgotPasswordDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: VybinTheme.errorColor,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Reset Password',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            '⚠️ Resetting your password will make your existing chat history permanently unreadable, '
-            'because your messages are encrypted with a key derived from your password.\n\n'
-            'Only proceed if you are okay with losing access to previous conversations.',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: VybinTheme.secondaryText),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: VybinTheme.errorColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('I Understand'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Password reset email simulated successfully.',
-                    ),
-                    backgroundColor: VybinTheme.neonHighlight,
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.85),
+                          ).colorScheme.onSurface.withValues(alpha: 0.85),
                           fontSize: 14,
                         ),
                       ),

@@ -30,6 +30,33 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {}
+
+  @override
+  bool isEmailVerified() => false;
+
+  @override
+  Future<void> reloadUser() async {}
+
+  @override
+  Future<void> sendEmailVerification() async {}
+
+  @override
+  Future<String> uploadProfilePhoto({
+    required String uid,
+    required String localPath,
+  }) async {
+    return 'https://example.com/mock_profile_photo.jpg';
+  }
+
+  @override
+  Future<UserModel> updateProfile({
+    required String uid,
+    required String displayName,
+    required String about,
+    String? profilePhotoUrl,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {

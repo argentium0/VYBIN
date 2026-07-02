@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vybin/app.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_event.dart';
@@ -155,7 +157,7 @@ class SettingsScreen extends StatelessWidget {
                         style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
                       ),
                       value: showStatus,
-                      activeColor: VybinTheme.whatsappGreen,
+                      activeThumbColor: VybinTheme.whatsappGreen,
                       onChanged: (bool value) async {
                         VybinApp.showActivityStatusNotifier.value = value;
                         final prefs = await SharedPreferences.getInstance();
@@ -181,7 +183,7 @@ class SettingsScreen extends StatelessWidget {
                         style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
                       ),
                       value: currentMode == ThemeMode.dark,
-                      activeColor: VybinTheme.whatsappGreen,
+                      activeThumbColor: VybinTheme.whatsappGreen,
                       onChanged: (bool value) {
                         VybinApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
                       },
@@ -235,6 +237,69 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const Divider(),
 
+                // Nuclear Purge Option Card (Spec 10.3 / 10.4)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    color: Colors.red.withValues(alpha: 0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: VybinTheme.errorColor, width: 1),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: VybinTheme.errorColor),
+                              SizedBox(width: 8),
+                              Text(
+                                'DANGER ZONE',
+                                style: TextStyle(
+                                  color: VybinTheme.errorColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Purging the secure local environment will erase all local databases, SQLite/Hive caches, settings, and completely delete your local RSA private keys from the device secure storage.\n\nThis action is irreversible and your message history will be permanently lost.',
+                            style: TextStyle(
+                              color: onSurface.withValues(alpha: 0.9),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: VybinTheme.errorColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () => _showPurgeConfirmationDialog(context),
+                              child: const Text(
+                                'Purge Secure Local Environment',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(),
+
                 // Log Out Option
                 ListTile(
                   leading: const Icon(Icons.logout, color: VybinTheme.errorColor),
@@ -251,6 +316,85 @@ class SettingsScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  void _showPurgeConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: VybinTheme.cardCharcoal,
+          title: const Text(
+            'Confirm Nuclear Purge',
+            style: TextStyle(color: VybinTheme.errorColor, fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'Are you absolutely sure you want to purge the secure local environment? All private keys, local databases, and settings will be permanently destroyed. This cannot be undone.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: VybinTheme.errorColor),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+
+                try {
+                  final authBloc = context.read<AuthBloc>();
+
+                  // Clear SharedPreferences
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
+
+                  // Clear FlutterSecureStorage
+                  const secureStorage = FlutterSecureStorage();
+                  await secureStorage.deleteAll();
+
+                  // Clear cache and app directories
+                  final appDir = await getApplicationSupportDirectory();
+                  final cacheDir = await getTemporaryDirectory();
+                  final docDir = await getApplicationDocumentsDirectory();
+
+                  final directories = [appDir, cacheDir, docDir];
+                  for (final dir in directories) {
+                    if (await dir.exists()) {
+                      try {
+                        await dir.delete(recursive: true);
+                      } catch (_) {}
+                    }
+                  }
+
+                  // Dispatch logout to auth bloc to trigger UI state reset
+                  authBloc.add(LogoutRequested());
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Local environment successfully purged.'),
+                        backgroundColor: VybinTheme.whatsappGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Purge failed: $e'),
+                        backgroundColor: VybinTheme.errorColor,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('PURGE EVERYTHING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

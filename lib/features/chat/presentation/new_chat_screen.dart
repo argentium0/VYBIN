@@ -139,7 +139,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   decoration: BoxDecoration(
                     color: VybinTheme.cardCharcoal,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: VybinTheme.whatsappGreen.withOpacity(0.3)),
+                    border: Border.all(color: VybinTheme.whatsappGreen.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,7 +213,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               participantUids: [myUid, otherUid],
                             );
 
-                            if (mounted) {
+                            if (context.mounted) {
                               context.pop(); // Close search page
                               context.push(
                                 '/chat/$conversationId',

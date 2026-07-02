@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
+import 'package:vybin/features/auth/bloc/auth_event.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 
@@ -60,37 +63,45 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
     }
   }
 
-  void _saveChanges() async {
+  void _saveChanges() {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isSaving = true;
     });
 
-    // Simulate saving changes to profile
-    await Future.delayed(const Duration(milliseconds: 1000));
+    final authBloc = context.read<AuthBloc>();
+    final authState = authBloc.state;
+    if (authState is AuthAuthenticated) {
+      authBloc.add(
+        UpdateProfileRequested(
+          displayName: _displayNameController.text.trim(),
+          about: _aboutController.text.trim(),
+        ),
+      );
+    }
+  }
 
-    if (!mounted) return;
+  void _pickAndUploadImage() async {
+    final authBloc = context.read<AuthBloc>();
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
 
     setState(() {
-      _isSaving = false;
-      _hasChanges = false;
+      _isSaving = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Profile updated successfully'),
-          ],
+    final authState = authBloc.state;
+    if (authState is AuthAuthenticated) {
+      authBloc.add(
+        UpdateProfileRequested(
+          displayName: _displayNameController.text.trim(),
+          about: _aboutController.text.trim(),
+          localPhotoPath: pickedFile.path,
         ),
-        backgroundColor: VybinTheme.whatsappGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -99,13 +110,42 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Profile', style: TextStyle(color: Colors.white)),
+        title: const Text('Profile Settings', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
       ),
-      body: BlocBuilder<AuthBloc, AuthState>(
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthAuthenticated) {
+            setState(() {
+              _isSaving = false;
+              _hasChanges = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Profile updated successfully'),
+                  ],
+                ),
+                backgroundColor: VybinTheme.whatsappGreen,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          } else if (state is AuthError) {
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.errorMessage)),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is! AuthAuthenticated) {
             return const Center(
@@ -125,11 +165,11 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Large profile photo section with blurred background layout (Spec 9.7)
+                    // Large profile photo section with circular avatar and edit icon
                     Container(
                       height: 220,
                       decoration: BoxDecoration(
-                        color: VybinTheme.whatsappDarkTeal.withOpacity(0.1),
+                        color: VybinTheme.whatsappDarkTeal.withValues(alpha: 0.1),
                         border: const Border(
                           bottom: BorderSide(color: VybinTheme.dividerCharcoal),
                         ),
@@ -139,27 +179,76 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                         children: [
                           Positioned.fill(
                             child: Container(
-                              color: VybinTheme.whatsappTeal.withOpacity(0.05),
+                              color: VybinTheme.whatsappTeal.withValues(alpha: 0.05),
                             ),
                           ),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundColor: VybinTheme.whatsappTeal,
-                                child: Text(
-                                  user.displayName.substring(0, 2).toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
+                              Stack(
+                                children: [
+                                  CachedNetworkImage(
+                                    imageUrl: user.profilePhotoUrl ?? '',
+                                    imageBuilder: (context, imageProvider) => Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        image: DecorationImage(
+                                          image: imageProvider,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    placeholder: (context, url) => Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: VybinTheme.cardCharcoal,
+                                      ),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: VybinTheme.neonHighlight,
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => CircleAvatar(
+                                      radius: 60,
+                                      backgroundColor: VybinTheme.whatsappTeal,
+                                      child: Text(
+                                        user.displayName.length >= 2
+                                            ? user.displayName.substring(0, 2).toUpperCase()
+                                            : user.displayName.toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: _pickAndUploadImage,
+                                      child: CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: VybinTheme.neonHighlight,
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.black,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                'Tap to change photo',
+                                'Tap camera icon to change photo',
                                 style: TextStyle(
                                   color: VybinTheme.whatsappGreen,
                                   fontSize: 13,
