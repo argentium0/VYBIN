@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,8 +25,14 @@ class MockAuthRepository implements AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? localPhotoPath,
   }) async {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<String> uploadProfileImage(File imageFile) async {
+    return 'https://example.com/mock_profile_photo.jpg';
   }
 
   @override

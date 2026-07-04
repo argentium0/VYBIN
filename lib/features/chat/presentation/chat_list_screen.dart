@@ -11,6 +11,7 @@ import 'package:vybin/features/chat/bloc/chat_list_state.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/user_model.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
+import 'package:vybin/shared/utils/contact_display_helper.dart';
 
 class ContactDetails {
   final String displayName;
@@ -141,13 +142,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
         orElse: () => '',
       );
       final contactUser = participants[otherUid];
-      if (contactUser != null) {
-        return contactUser.displayName.toLowerCase().contains(query) ||
-            contactUser.username.toLowerCase().contains(query);
-      }
       final contact = getContactDetails(conv.conversationId);
-      return contact.displayName.toLowerCase().contains(query) ||
-          contact.username.toLowerCase().contains(query);
+
+      final customName = localContactAliases[otherUid];
+      final username = contactUser?.username ?? contact.username;
+      final displayName = getContactDisplayName(
+        customName: customName,
+        username: username,
+      );
+
+      return displayName.toLowerCase().contains(query) ||
+          username.toLowerCase().contains(query);
     }).toList();
 
     if (filteredConversations.isEmpty) {
@@ -196,19 +201,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
           orElse: () => '',
         );
         final contactUser = participants[otherUid];
-        if (contactUser != null) {
-          SharedPreferences.getInstance().then((prefs) {
-            prefs.setString('contact_${contactUser.uid}', contactUser.displayName);
-          });
-        }
         final contact = getContactDetails(conv.conversationId);
 
-        final displayName = contactUser?.displayName ?? contact.displayName;
-        final avatarInitials = contactUser != null
-            ? (contactUser.displayName.length >= 2
-                ? contactUser.displayName.substring(0, 2).toUpperCase()
-                : contactUser.displayName.toUpperCase())
-            : contact.avatarInitials;
+        final customName = localContactAliases[otherUid];
+        final username = contactUser?.username ?? contact.username;
+        final displayName = getContactDisplayName(
+          customName: customName,
+          username: username,
+        );
+
+        if (contactUser != null) {
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setString('contact_${contactUser.uid}', displayName);
+          });
+        }
+
+        final cleanName = displayName.startsWith('@') ? displayName.substring(1) : displayName;
+        final avatarInitials = cleanName.length >= 2
+            ? cleanName.substring(0, 2).toUpperCase()
+            : cleanName.toUpperCase();
 
         final unread = conv.unreadCount[myUid] ?? 0;
         final hasLastMessage = conv.lastMessagePreview != null;

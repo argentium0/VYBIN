@@ -16,6 +16,7 @@ import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
 import '../models/message.dart';
+import 'package:vybin/shared/utils/contact_display_helper.dart';
 
 class IndividualChatScreen extends StatefulWidget {
   final String conversationId;
@@ -317,33 +318,45 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       child: Scaffold(
         appBar: AppBar(
           titleSpacing: 0,
-          title: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: VybinTheme.whatsappTeal,
-                child: Text(
-                  widget.contactAvatarInitials,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          title: StreamBuilder<UserModel?>(
+            stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
+            builder: (context, snapshot) {
+              final user = snapshot.data;
+              final customName = localContactAliases[otherUid];
+              final username = user?.username ?? otherUid;
+              final displayName = getContactDisplayName(
+                customName: customName,
+                username: username,
+              );
+
+              final cleanName = displayName.startsWith('@') ? displayName.substring(1) : displayName;
+              final initials = cleanName.length >= 2
+                  ? cleanName.substring(0, 2).toUpperCase()
+                  : cleanName.toUpperCase();
+
+              final statusText = _formatPresence(user);
+              final isOnline = user?.onlineStatus == 'online';
+
+              return Row(
                 children: [
-                  Text(
-                    widget.contactName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  CircleAvatar(
+                    backgroundColor: VybinTheme.whatsappTeal,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  StreamBuilder<UserModel?>(
-                    stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
-                    builder: (context, snapshot) {
-                      final user = snapshot.data;
-                      final statusText = _formatPresence(user);
-                      final isOnline = user?.onlineStatus == 'online';
-
-                      return ValueListenableBuilder<bool>(
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ValueListenableBuilder<bool>(
                         valueListenable: VybinApp.showActivityStatusNotifier,
                         builder: (context, showStatus, _) {
                           if (!showStatus || statusText.isEmpty) return const SizedBox.shrink();
@@ -372,12 +385,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                             ],
                           );
                         },
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
           actions: [
             PopupMenuButton<String>(

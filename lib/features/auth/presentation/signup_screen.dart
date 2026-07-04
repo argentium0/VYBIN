@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_event.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
@@ -22,6 +24,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  String? _selectedImagePath;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
 
   final _usernameFocusNode = FocusNode();
 
@@ -248,6 +269,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           username: _usernameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          localPhotoPath: _selectedImagePath,
         ),
       );
     }
@@ -412,35 +434,43 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 16),
                     // Profile photo picker (Spec 9.3)
                     Center(
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 45,
-                            backgroundColor: VybinTheme.cardCharcoal,
-                            child: Icon(
-                              Icons.person_outline,
-                              size: 48,
-                               // ignore: deprecated_member_use
-                              color: VybinTheme.secondaryText.withOpacity(0.5),
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 45,
+                              backgroundColor: VybinTheme.cardCharcoal,
+                              backgroundImage: _selectedImagePath != null
+                                  ? FileImage(File(_selectedImagePath!))
+                                  : null,
+                              child: _selectedImagePath == null
+                                  ? Icon(
+                                      Icons.person_outline,
+                                      size: 48,
+                                      // ignore: deprecated_member_use
+                                      color: VybinTheme.secondaryText.withOpacity(0.5),
+                                    )
+                                  : null,
                             ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: VybinTheme.whatsappGreen,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt_outlined,
-                                size: 16,
-                                color: Colors.white,
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: VybinTheme.whatsappGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_outlined,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),

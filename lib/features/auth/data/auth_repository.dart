@@ -108,12 +108,13 @@ class AuthRepository {
     return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
   }
 
-  /// Registers a new user with an atomic username check and public/private key generation.
+  /// Registers a new user with an atomic username check, public/private key generation, and optional profile photo upload.
   Future<UserModel> signUp({
     required String displayName,
     required String username,
     required String email,
     required String password,
+    String? localPhotoPath,
   }) async {
     final sanitizedUsername = username.trim().toLowerCase();
 
@@ -140,6 +141,21 @@ class AuthRepository {
     await createdFbUser.sendEmailVerification();
 
     try {
+      // Upload profile image immediately after Firebase Auth user is created if selected
+      String? downloadUrl;
+      if (localPhotoPath != null) {
+        try {
+          downloadUrl = await uploadProfilePhoto(
+            uid: createdFbUser.uid,
+            localPath: localPhotoPath,
+          );
+          await createdFbUser.updatePhotoURL(downloadUrl);
+        } catch (e) {
+          print('Error uploading profile picture during signup: $e');
+          rethrow;
+        }
+      }
+
       // 3. Generate RSA-2048 key pair
       final keyPair = await _encryptionService.generateKeyPair();
 
@@ -176,6 +192,7 @@ class AuthRepository {
         about: 'Hey there! I am using VYBIN',
         createdAt: DateTime.now(),
         blockedUids: const [],
+        profilePhotoUrl: downloadUrl,
       );
 
       await _firestore.runTransaction((transaction) async {
@@ -188,7 +205,11 @@ class AuthRepository {
         }
 
         final userRef = _firestore.collection('users').doc(createdFbUser.uid);
-        transaction.set(userRef, user.toJson());
+        final userData = user.toJson();
+        if (downloadUrl != null) {
+          userData['photoUrl'] = downloadUrl;
+        }
+        transaction.set(userRef, userData);
         transaction.set(usernameRef, {'uid': createdFbUser.uid});
       });
 
@@ -251,7 +272,7 @@ class AuthRepository {
     await _firebaseAuth.signOut();
   }
 
-  /// Compresses a photo and uploads it to Firebase Storage under `/profiles/{uid}.jpg`.
+  /// Compresses a photo and uploads it to Firebase Storage under `users/{uid}/profile_pic.jpg`.
   Future<String> uploadProfilePhoto({
     required String uid,
     required String localPath,
@@ -278,7 +299,7 @@ class AuthRepository {
     }
 
     // Upload to Firebase Storage
-    final ref = FirebaseStorage.instance.ref().child('profiles').child('$uid.jpg');
+    final ref = FirebaseStorage.instance.ref().child('users').child(uid).child('profile_pic.jpg');
     
     try {
       await ref.delete();
@@ -294,19 +315,51 @@ class AuthRepository {
     return await uploadTask.ref.getDownloadURL();
   }
 
-  /// Updates the user's display name, about section, and optional profile photo URL in Firestore.
+  /// Compresses and uploads a profile image file for the currently authenticated user.
+  /// Overwrites the existing profile picture at `users/{uid}/profile_pic.jpg` and returns the download URL.
+  Future<String> uploadProfileImage(File imageFile) async {
+    final currentUser = _firebaseAuth.currentUser;
+    if (currentUser == null) {
+      throw Exception('No authenticated user found for profile image upload.');
+    }
+    
+    try {
+      return await uploadProfilePhoto(
+        uid: currentUser.uid,
+        localPath: imageFile.path,
+      );
+    } catch (e) {
+      throw Exception('Failed to upload profile image: $e');
+    }
+  }
+
+  /// Updates the user's display name, about section, and optional profile photo URL in Firestore and Firebase Auth.
   Future<UserModel> updateProfile({
     required String uid,
     required String displayName,
     required String about,
     String? profilePhotoUrl,
   }) async {
+    // 1. Update Firebase Auth currentUser details if available
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user != null) {
+        if (profilePhotoUrl != null) {
+          await user.updatePhotoURL(profilePhotoUrl);
+        }
+        await user.updateDisplayName(displayName);
+      }
+    } catch (e) {
+      print('Firebase Auth profile update error: $e');
+    }
+
     final Map<String, dynamic> updates = {
       'displayName': displayName,
       'about': about,
     };
     if (profilePhotoUrl != null) {
       updates['profilePhotoUrl'] = profilePhotoUrl;
+      updates['photoUrl'] = profilePhotoUrl; // Write photoUrl for consistency
     }
 
     await _firestore.collection('users').doc(uid).update(updates);
