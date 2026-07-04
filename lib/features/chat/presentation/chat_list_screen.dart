@@ -58,6 +58,67 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  bool _showBanner = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBannerVisibility();
+  }
+
+  Future<void> _checkBannerVisibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasExported = prefs.getBool('has_exported_identity') ?? false;
+    final hasDismissed = prefs.getBool('dismissed_identity_banner') ?? false;
+    if (mounted) {
+      setState(() {
+        _showBanner = !hasExported && !hasDismissed;
+      });
+    }
+  }
+
+  Widget _buildIdentityBanner() {
+    if (!_showBanner) return const SizedBox.shrink();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.15),
+        border: const Border(
+          bottom: BorderSide(color: Colors.amber, width: 1),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.security, color: Colors.amber, size: 20),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              '🔒 Secure your identity: Export your device backup blob from Settings to allow multi-device migration.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                height: 1.3,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('dismissed_identity_banner', true);
+              setState(() {
+                _showBanner = false;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -343,7 +404,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     if (value == 'logout') {
                       context.read<AuthBloc>().add(LogoutRequested());
                     } else if (value == 'settings') {
-                      context.push('/settings');
+                      context.push('/settings').then((_) => _checkBannerVisibility());
                     }
                   },
                   itemBuilder: (BuildContext context) {
@@ -426,7 +487,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               onTap: () {
                 Navigator.pop(context);
-                context.push('/settings');
+                context.push('/settings').then((_) => _checkBannerVisibility());
               },
             ),
             ListTile(
@@ -442,7 +503,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               onTap: () {
                 Navigator.pop(context);
-                context.push('/settings');
+                context.push('/settings').then((_) => _checkBannerVisibility());
               },
             ),
             const Divider(),
@@ -460,33 +521,40 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ),
       ),
-      body: BlocBuilder<ChatListBloc, ChatListState>(
-        builder: (context, state) {
-          if (state is ChatListLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
-            );
-          } else if (state is ChatListError) {
-            return Center(
-              child: Text(
-                state.errorMessage,
-                style: const TextStyle(
-                  color: VybinTheme.errorColor,
-                  fontSize: 16,
-                ),
-              ),
-            );
-          } else if (state is ChatListLoaded) {
-            return _buildChatsView(state.conversations, state.participants);
-          }
-          return const SizedBox.shrink();
-        },
+      body: Column(
+        children: [
+          _buildIdentityBanner(),
+          Expanded(
+            child: BlocBuilder<ChatListBloc, ChatListState>(
+              builder: (context, state) {
+                if (state is ChatListLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
+                  );
+                } else if (state is ChatListError) {
+                  return Center(
+                    child: Text(
+                      state.errorMessage,
+                      style: const TextStyle(
+                        color: VybinTheme.errorColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  );
+                } else if (state is ChatListLoaded) {
+                  return _buildChatsView(state.conversations, state.participants);
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         onTap: (index) {
           if (index == 1) {
-            context.push('/settings');
+            context.push('/settings').then((_) => _checkBannerVisibility());
           }
         },
         selectedItemColor: Theme.of(context).brightness == Brightness.dark

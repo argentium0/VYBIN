@@ -57,6 +57,24 @@ class MockAuthRepository implements AuthRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {}
+
+  @override
+  Future<UserModel> completeLoginWithPrivateKey({
+    required UserModel user,
+    required String password,
+    required String encryptedPrivateKey,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {

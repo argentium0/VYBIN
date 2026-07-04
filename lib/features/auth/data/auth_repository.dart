@@ -9,6 +9,8 @@ import 'package:pointycastle/export.dart';
 import 'package:vybin/core/services/encryption_service.dart';
 import 'package:vybin/core/services/secure_key_storage.dart';
 import 'package:vybin/shared/models/user_model.dart';
+import 'package:vybin/shared/models/conversation_model.dart';
+import 'package:vybin/shared/models/message_model.dart';
 
 class AuthRepository {
   final fb.FirebaseAuth _firebaseAuth;
@@ -79,7 +81,7 @@ class AuthRepository {
     );
     final encryptedPrivKey = await _secureKeyStorage.readEncryptedPrivateKey();
     if (encryptedPrivKey == null) {
-      throw Exception('Encrypted private key not found on this device.');
+      throw IdentityKeyMissingException(user: user, password: password);
     }
 
     final privKey = _encryptionService.decryptPrivateKey(
@@ -193,6 +195,9 @@ class AuthRepository {
       // Load key pair into memory immediately since registration succeeded
       _encryptionService.loadKeyPair(keyPair);
 
+      // Inject educational welcome system message from VYBIN Team
+      await _injectWelcomeMessage(user);
+
       return user;
     } catch (e) {
       // Clean up Firebase Auth user if Firestore registration fails
@@ -274,6 +279,17 @@ class AuthRepository {
 
     // Upload to Firebase Storage
     final ref = FirebaseStorage.instance.ref().child('profiles').child('$uid.jpg');
+    
+    try {
+      await ref.delete();
+    } on FirebaseException catch (e) {
+      if (e.code != 'object-not-found' && e.code != 'firebase_storage/object-not-found') {
+        rethrow;
+      }
+    } catch (_) {
+      // Gracefully bypass
+    }
+
     final uploadTask = await ref.putFile(File(compressedFile.path));
     return await uploadTask.ref.getDownloadURL();
   }
@@ -299,4 +315,244 @@ class AuthRepository {
     final updatedDoc = await _firestore.collection('users').doc(uid).get();
     return UserModel.fromJson(updatedDoc.data()!);
   }
+
+  /// Deletes the user account from Auth and Firestore, deleting the user profile and username mapping.
+  Future<void> deleteAccount() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
+
+    final uid = user.uid;
+
+    // Fetch username to delete it from usernames collection
+    final userDoc = await _firestore.collection('users').doc(uid).get();
+    final username = userDoc.data()?['username'] as String?;
+
+    final batch = _firestore.batch();
+    batch.delete(_firestore.collection('users').doc(uid));
+    if (username != null) {
+      batch.delete(_firestore.collection('usernames').doc(username));
+    }
+
+    await batch.commit();
+    await user.delete();
+
+    // Clean up local keys
+    _encryptionService.clearPrivateKey();
+    await _secureKeyStorage.deleteRawPrivateKey();
+  }
+
+  /// Re-authenticates, changes the Firebase password, and re-encrypts the local cryptographic vault.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final currentUser = _firebaseAuth.currentUser;
+    if (currentUser == null || currentUser.email == null) {
+      throw Exception('No authenticated user found.');
+    }
+
+    // 1. Re-authenticate using the validated current password.
+    final credential = fb.EmailAuthProvider.credential(
+      email: currentUser.email!,
+      password: currentPassword,
+    );
+
+    try {
+      await currentUser.reauthenticateWithCredential(credential);
+    } on fb.FirebaseAuthException catch (e) {
+      throw Exception('Re-authentication failed: ${e.message}');
+    }
+
+    RSAPrivateKey? temporaryPrivateKey;
+    try {
+      // 3. Vault Re-encryption Sequence
+      // a. Decrypt local private key
+      final encryptedPrivateKeyBase64 = await _secureKeyStorage.readEncryptedPrivateKey();
+      if (encryptedPrivateKeyBase64 == null) {
+        throw Exception('Cryptographic vault not found locally.');
+      }
+
+      final currentDerivedKey = _encryptionService.deriveKeyFromPassword(
+        currentPassword,
+        currentUser.uid,
+      );
+
+      temporaryPrivateKey = _encryptionService.decryptPrivateKey(
+        encryptedPrivateKeyBase64,
+        currentDerivedKey,
+      );
+
+      // b. Update password in Firebase Auth
+      await currentUser.updatePassword(newPassword);
+
+      // c. Re-derive key with new password, encrypt, and save to secure storage
+      final newDerivedKey = _encryptionService.deriveKeyFromPassword(
+        newPassword,
+        currentUser.uid,
+      );
+
+      final newEncryptedPrivateKeyBase64 = _encryptionService.encryptPrivateKey(
+        temporaryPrivateKey,
+        newDerivedKey,
+      );
+
+      await _secureKeyStorage.writeEncryptedPrivateKey(newEncryptedPrivateKeyBase64);
+    } finally {
+      // d. Wipe the plain text key from temporary memory variables
+      temporaryPrivateKey = null;
+    }
+  }
+
+  /// Completes the login process by saving and loading the private key.
+  Future<UserModel> completeLoginWithPrivateKey({
+    required UserModel user,
+    required String password,
+    required String encryptedPrivateKey,
+  }) async {
+    // 1. Save the encrypted private key to secure storage
+    await _secureKeyStorage.writeEncryptedPrivateKey(encryptedPrivateKey);
+
+    // 2. Re-derive AES key and decrypt private key
+    final derivedKey = _encryptionService.deriveKeyFromPassword(
+      password,
+      user.uid,
+    );
+
+    final privKey = _encryptionService.decryptPrivateKey(
+      encryptedPrivateKey,
+      derivedKey,
+    );
+    final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+
+    // Load key pair into memory
+    _encryptionService.loadKeyPair(
+      AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
+    );
+
+    // Save raw private key locally for background processing & startup
+    final rawJson = _encryptionService.serializePrivateKey(privKey);
+    await _secureKeyStorage.writeRawPrivateKey(rawJson);
+
+    // 3. Update online status in Firestore
+    await _firestore.collection('users').doc(user.uid).update({
+      'onlineStatus': 'online',
+      'lastSeen': DateTime.now().toIso8601String(),
+    });
+
+    return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
+  }
+
+  Future<void> _injectWelcomeMessage(UserModel user) async {
+    try {
+      final sortedUids = [user.uid, 'vybin_team']..sort();
+      final conversationId = sortedUids.join('_');
+
+      // 1. Ensure the "VYBIN Team" user exists in Firestore
+      final vybinTeamRef = _firestore.collection('users').doc('vybin_team');
+      final vybinTeamSnap = await vybinTeamRef.get();
+      if (!vybinTeamSnap.exists) {
+        await vybinTeamRef.set({
+          'uid': 'vybin_team',
+          'displayName': 'VYBIN Team',
+          'username': 'vybin_team',
+          'email': 'team@vybin.internal',
+          'publicKey': user.publicKey, // Use user's public key as dummy PEM
+          'onlineStatus': 'online',
+          'lastSeen': DateTime.now().toIso8601String(),
+          'about': 'System Account',
+          'createdAt': DateTime.now().toIso8601String(),
+          'blockedUids': const <String>[],
+        });
+        
+        await _firestore.collection('usernames').doc('vybin_team').set({
+          'uid': 'vybin_team'
+        });
+      }
+
+      // 2. Create the conversation document if not exists
+      final convRef = _firestore.collection('conversations').doc(conversationId);
+      final convSnap = await convRef.get();
+      if (!convSnap.exists) {
+        final unreadMap = {
+          user.uid: 0,
+          'vybin_team': 0,
+        };
+        await convRef.set({
+          'conversationId': conversationId,
+          'participantUids': [user.uid, 'vybin_team'],
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastMessageAt': FieldValue.serverTimestamp(),
+          'unreadCount': unreadMap,
+          'mutedBy': const <String>[],
+          'deletedBy': const <String>[],
+          'lastMessagePreview': null,
+        });
+      }
+
+      // 3. Encrypt the welcome message using user's public key
+      const welcomeText =
+          "Welcome to VYBIN! Because your privacy is our priority, this app uses strict End-to-End Encryption. Your access keys are locked entirely to this physical phone. If you ever plan to switch devices, you MUST go to Settings > Account > Export Cryptographic Identity and save your backup blob somewhere safe. Without it, your history cannot be recovered on a new device.";
+
+      final encryptedData = _encryptionService.encryptMessage(
+        plaintext: welcomeText,
+        recipientUid: user.uid,
+        recipientPubKeyPEM: user.publicKey,
+        senderUid: 'vybin_team',
+        senderPubKeyPEM: user.publicKey, // Use user's public key as dummy PEM
+      );
+
+      // 4. Create and save the message
+      final messagesRef = _firestore
+          .collection('conversations')
+          .doc(conversationId)
+          .collection('messages');
+
+      final messageDoc = messagesRef.doc();
+      final messageId = messageDoc.id;
+
+      final message = MessageModel(
+        messageId: messageId,
+        senderUid: 'vybin_team',
+        timestamp: DateTime.now(),
+        type: 'text',
+        iv: encryptedData['iv'] as String,
+        ciphertext: encryptedData['ciphertext'] as String,
+        encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+        status: 'sent',
+        deletedFor: const [],
+        deletedForEveryone: false,
+      );
+
+      final lastMessagePreview = LastMessagePreview(
+        senderUid: 'vybin_team',
+        type: 'text',
+        iv: encryptedData['iv'] as String,
+        ciphertext: encryptedData['ciphertext'] as String,
+        encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+      );
+
+      final batch = _firestore.batch();
+      batch.set(messageDoc, message.toJson());
+      batch.update(convRef, {
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessagePreview': lastMessagePreview.toJson(),
+        'unreadCount.${user.uid}': FieldValue.increment(1),
+      });
+
+      await batch.commit();
+    } catch (e) {
+      // Print/log and allow signup to complete even if welcome message injection fails
+      print('Error injecting welcome message: $e');
+    }
+  }
+}
+
+class IdentityKeyMissingException implements Exception {
+  final UserModel user;
+  final String password;
+
+  IdentityKeyMissingException({required this.user, required this.password});
+
+  @override
+  String toString() => 'Cryptographic identity key missing from secure storage.';
 }

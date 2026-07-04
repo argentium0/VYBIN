@@ -17,6 +17,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckEmailVerificationRequested>(_onCheckEmailVerificationRequested);
     on<ResendVerificationEmailRequested>(_onResendVerificationEmailRequested);
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
+    on<DeleteAccountRequested>(_onDeleteAccountRequested);
+    on<IdentityImportSubmitted>(_onIdentityImportSubmitted);
+    on<ChangePasswordRequested>(_onChangePasswordRequested);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -52,6 +55,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(AuthEmailUnverified(user));
       }
+    } on IdentityKeyMissingException catch (e) {
+      emit(AuthRequiresIdentityImport(user: e.user, password: e.password));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
@@ -168,6 +173,67 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(updatedUser));
       } catch (e) {
         emit(AuthError(e.toString()));
+        emit(AuthAuthenticated(currentState.user));
+      }
+    }
+  }
+
+  Future<void> _onDeleteAccountRequested(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await _authRepository.deleteAccount();
+      emit(AuthUnauthenticated());
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onIdentityImportSubmitted(
+    IdentityImportSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is AuthRequiresIdentityImport) {
+      emit(AuthLoading());
+      try {
+        final user = await _authRepository.completeLoginWithPrivateKey(
+          user: currentState.user,
+          password: currentState.password,
+          encryptedPrivateKey: event.identityBlob.trim(),
+        );
+
+        if (_authRepository.isEmailVerified()) {
+          emit(AuthAuthenticated(user));
+        } else {
+          emit(AuthEmailUnverified(user));
+        }
+      } catch (e) {
+        emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+        // Restore previous state so user can re-attempt pasting/editing
+        emit(currentState);
+      }
+    }
+  }
+
+  Future<void> _onChangePasswordRequested(
+    ChangePasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      emit(AuthLoading());
+      try {
+        await _authRepository.changePassword(
+          currentPassword: event.currentPassword,
+          newPassword: event.newPassword,
+        );
+        emit(const AuthPasswordChangeSuccess());
+        emit(AuthAuthenticated(currentState.user));
+      } catch (e) {
+        emit(AuthError(e.toString().replaceAll('Exception: ', '')));
         emit(AuthAuthenticated(currentState.user));
       }
     }

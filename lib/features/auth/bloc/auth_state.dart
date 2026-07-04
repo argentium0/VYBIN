@@ -52,3 +52,22 @@ class AuthEmailUnverified extends AuthState {
   @override
   List<Object?> get props => [user, verificationError, timestamp];
 }
+
+/// State representing a user who is authenticated on Firebase, but lacks their E2EE private key locally.
+class AuthRequiresIdentityImport extends AuthState {
+  final UserModel user;
+  final String password;
+
+  const AuthRequiresIdentityImport({
+    required this.user,
+    required this.password,
+  });
+
+  @override
+  List<Object?> get props => [user, password];
+}
+
+/// State representing a successfully completed password change and vault re-encryption.
+class AuthPasswordChangeSuccess extends AuthState {
+  const AuthPasswordChangeSuccess();
+}

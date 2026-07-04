@@ -84,10 +84,26 @@ class ChatRepository {
     return _firestore
         .collection('conversations')
         .where('participantUids', arrayContains: currentUid)
-        .orderBy('lastMessageAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(snapshot.docs);
+      final now = DateTime.now();
+
+      DateTime parseTimestamp(dynamic val) {
+        if (val == null) return now;
+        if (val is Timestamp) return val.toDate();
+        if (val is String) return DateTime.tryParse(val) ?? now;
+        if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+        return now;
+      }
+
+      docs.sort((a, b) {
+        final aTime = parseTimestamp(a.data()['lastMessageAt']);
+        final bTime = parseTimestamp(b.data()['lastMessageAt']);
+        return bTime.compareTo(aTime); // Descending (most recent first)
+      });
+
+      return docs.map((doc) {
         final data = doc.data();
         return ConversationModel.fromJson(data);
       }).toList();
@@ -284,10 +300,26 @@ class ChatRepository {
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
-        .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
-      currentMessages = snapshot.docs.map((doc) {
+      final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(snapshot.docs);
+      final now = DateTime.now();
+
+      DateTime parseTimestamp(dynamic val) {
+        if (val == null) return now;
+        if (val is Timestamp) return val.toDate();
+        if (val is String) return DateTime.tryParse(val) ?? now;
+        if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+        return now;
+      }
+
+      docs.sort((a, b) {
+        final aTime = parseTimestamp(a.data()['timestamp']);
+        final bTime = parseTimestamp(b.data()['timestamp']);
+        return bTime.compareTo(aTime); // Descending (most recent first)
+      });
+
+      currentMessages = docs.map((doc) {
         final data = doc.data();
         var msg = MessageModel.fromJson(data);
 

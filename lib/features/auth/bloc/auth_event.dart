@@ -59,3 +59,27 @@ class UpdateProfileRequested extends AuthEvent {
   @override
   List<Object?> get props => [displayName, about, localPhotoPath];
 }
+
+class DeleteAccountRequested extends AuthEvent {}
+
+class IdentityImportSubmitted extends AuthEvent {
+  final String identityBlob;
+
+  const IdentityImportSubmitted({required this.identityBlob});
+
+  @override
+  List<Object?> get props => [identityBlob];
+}
+
+class ChangePasswordRequested extends AuthEvent {
+  final String currentPassword;
+  final String newPassword;
+
+  const ChangePasswordRequested({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  @override
+  List<Object?> get props => [currentPassword, newPassword];
+}
