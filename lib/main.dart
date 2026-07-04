@@ -11,10 +11,11 @@ import 'package:vybin/features/auth/data/auth_repository.dart';
 import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/core/services/encryption_service.dart';
 import 'package:vybin/core/services/notification_service.dart';
+import 'package:vybin/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initialize();
   FirebaseMessaging.onBackgroundMessage(anonymizedBackgroundMessageHandler);
 
@@ -40,9 +41,10 @@ void main() async {
       try {
         final token = await FirebaseMessaging.instance.getToken();
         if (token != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'fcmToken': token,
-          }, SetOptions(merge: true));
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({'fcmToken': token}, SetOptions(merge: true));
         }
       } catch (e) {
         debugPrint('Error saving FCM token: $e');
@@ -84,4 +86,3 @@ void main() async {
     ),
   );
 }
-

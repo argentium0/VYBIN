@@ -13,7 +13,10 @@
                     "projectId": "vybin-firebase",
                     "configurations": {
                         "android": "1:459709003792:android:a87ed461a6229b07573295",
-                        "ios": "1:459709003792:ios:3bbab77787c89495573295"
+                        "ios": "1:459709003792:ios:3bbab77787c89495573295",
+                        "macos": "1:459709003792:ios:3bbab77787c89495573295",
+                        "web": "1:459709003792:web:b1cbb34bb2124c80573295",
+                        "windows": "1:459709003792:web:d149abbde3454802573295"
                     }
                 }
             }

@@ -2,7 +2,7 @@
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -17,10 +17,11 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
+      debugPrint(
+        'WARNING: The web Firebase instance is unconfigured. '
+        'Testing should be shifted to a native mobile device target.',
       );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +29,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -56,7 +51,6 @@ class DefaultFirebaseOptions {
     projectId: 'vybin-firebase',
     storageBucket: 'vybin-firebase.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB4SMYpbXJdMOCY-Nxk6ujk5YYbLaQiHPc',
     appId: '1:459709003792:ios:3bbab77787c89495573295',
@@ -64,5 +58,31 @@ class DefaultFirebaseOptions {
     projectId: 'vybin-firebase',
     storageBucket: 'vybin-firebase.firebasestorage.app',
     iosBundleId: 'com.example.vybin.vybin',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'UNCONFIGURED_WEB_KEY',
+    appId: '1:000000000000:web:unconfigured',
+    messagingSenderId: '000000000000',
+    projectId: 'vybin-unconfigured',
+    authDomain: 'vybin-unconfigured.firebaseapp.com',
+    storageBucket: 'vybin-unconfigured.firebasestorage.app',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyB4SMYpbXJdMOCY-Nxk6ujk5YYbLaQiHPc',
+    appId: '1:459709003792:ios:3bbab77787c89495573295',
+    messagingSenderId: '459709003792',
+    projectId: 'vybin-firebase',
+    storageBucket: 'vybin-firebase.firebasestorage.app',
+    iosBundleId: 'com.example.vybin.vybin',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCGSC2AxbLfxQr5Dq__nxvfFe7ctOB1AgI',
+    appId: '1:459709003792:web:d149abbde3454802573295',
+    messagingSenderId: '459709003792',
+    projectId: 'vybin-firebase',
+    authDomain: 'vybin-firebase.firebaseapp.com',
+    storageBucket: 'vybin-firebase.firebasestorage.app',
   );
 }
