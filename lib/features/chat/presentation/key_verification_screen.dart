@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -237,59 +238,88 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: VybinTheme.dividerCharcoal),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: VybinTheme.neonHighlight,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+      child: InkWell(
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: fingerprint));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fingerprint copied to clipboard.'),
+              backgroundColor: VybinTheme.whatsappGreen,
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // scannable visual grid of hash blocks
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: blocks.map((block) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: VybinTheme.darkCharcoal,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: VybinTheme.dividerCharcoal),
-                      ),
-                      child: Text(
-                        block,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'monospace',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: VybinTheme.neonHighlight,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.copy,
+                    color: VybinTheme.neonHighlight,
+                    size: 18,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // scannable visual grid of hash blocks
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: blocks.map((block) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: VybinTheme.darkCharcoal,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: VybinTheme.dividerCharcoal),
+                        ),
+                        child: Text(
+                          block,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'monospace',
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
