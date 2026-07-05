@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vybin/shared/models/user_model.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
@@ -307,22 +308,36 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   // Cryptographic Fingerprint block
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.black38,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Text(
-                      _fingerprint,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        color: Colors.white,
-                        fontSize: 14,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: _fingerprint));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fingerprint copied to clipboard.'),
+                          backgroundColor: VybinTheme.whatsappGreen,
+                        ),
+                      );
+                    },
+                    child: Tooltip(
+                      message: 'Tap to copy fingerprint',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.black38,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Text(
+                          _fingerprint,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            color: Colors.white,
+                            fontSize: 14,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),

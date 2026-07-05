@@ -1759,14 +1759,37 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
     } else if (_error != null) {
       content = Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _error!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: _loadAndDecryptImage,
+              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              label: const Text(
+                'Retry Download',
+                style: TextStyle(
+                  color: VybinTheme.whatsappGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -2007,9 +2030,40 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
     } else if (_error != null) {
       content = Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Text(
-          _error!,
-          style: const TextStyle(color: Colors.red, fontSize: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: _loadAndDecryptDocument,
+              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              label: const Text(
+                'Retry Download',
+                style: TextStyle(
+                  color: VybinTheme.whatsappGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     } else {
