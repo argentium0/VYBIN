@@ -109,6 +109,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         errorMessage = 'No user registered with this email address.';
       } else if (e.code == 'invalid-email') {
         errorMessage = 'The email address is invalid.';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
       } else if (e.message != null) {
         errorMessage = e.message!;
       }

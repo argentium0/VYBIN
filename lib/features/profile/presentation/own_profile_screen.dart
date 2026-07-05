@@ -144,6 +144,16 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.errorMessage)),
             );
+          } else if (state is AuthNetworkError) {
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage),
+                backgroundColor: VybinTheme.errorColor,
+              ),
+            );
           }
         },
         builder: (context, state) {

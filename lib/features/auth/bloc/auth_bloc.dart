@@ -57,6 +57,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } on IdentityKeyMissingException catch (e) {
       emit(AuthRequiresIdentityImport(user: e.user, password: e.password));
+    } on NetworkException catch (e) {
+      emit(AuthNetworkError(e.message));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
@@ -76,6 +78,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         localPhotoPath: event.localPhotoPath,
       );
       emit(AuthEmailUnverified(user));
+    } on NetworkException catch (e) {
+      emit(AuthNetworkError(e.message));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
@@ -172,6 +176,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
 
         emit(AuthAuthenticated(updatedUser));
+      } on NetworkException catch (e) {
+        emit(AuthNetworkError(e.message));
+        emit(AuthAuthenticated(currentState.user));
       } catch (e) {
         emit(AuthError(e.toString()));
         emit(AuthAuthenticated(currentState.user));
@@ -187,6 +194,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       await _authRepository.deleteAccount();
       emit(AuthUnauthenticated());
+    } on NetworkException catch (e) {
+      emit(AuthNetworkError(e.message));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
@@ -211,6 +220,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         } else {
           emit(AuthEmailUnverified(user));
         }
+      } on NetworkException catch (e) {
+        emit(AuthNetworkError(e.message));
+        emit(currentState);
       } catch (e) {
         emit(AuthError(e.toString().replaceAll('Exception: ', '')));
         // Restore previous state so user can re-attempt pasting/editing
@@ -232,6 +244,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           newPassword: event.newPassword,
         );
         emit(const AuthPasswordChangeSuccess());
+        emit(AuthAuthenticated(currentState.user));
+      } on NetworkException catch (e) {
+        emit(AuthNetworkError(e.message));
         emit(AuthAuthenticated(currentState.user));
       } catch (e) {
         emit(AuthError(e.toString().replaceAll('Exception: ', '')));

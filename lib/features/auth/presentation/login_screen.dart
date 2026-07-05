@@ -85,6 +85,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             );
+          } else if (state is AuthNetworkError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.errorMessage)),
+                  ],
+                ),
+                backgroundColor: VybinTheme.errorColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
           } else if (state is AuthAuthenticated) {
             // Contextual AlertDialog popup on simulated success
             showDialog(

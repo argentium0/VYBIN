@@ -37,6 +37,16 @@ class AuthError extends AuthState {
   List<Object?> get props => [errorMessage];
 }
 
+/// State representing a network error during authentication.
+class AuthNetworkError extends AuthState {
+  final String errorMessage;
+
+  const AuthNetworkError(this.errorMessage);
+
+  @override
+  List<Object?> get props => [errorMessage];
+}
+
 /// State representing an authenticated Firebase user who has not yet verified their email.
 class AuthEmailUnverified extends AuthState {
   final UserModel user;
