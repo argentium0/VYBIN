@@ -1279,6 +1279,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   int _simulatedElapsedSeconds = 0;
   int _totalDurationSeconds = 0;
 
+  bool _isLoading = false;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -1364,15 +1367,16 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       String localPath = mediaUrl;
       if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
         try {
+          if (mounted) {
+            setState(() {
+              _isLoading = true;
+              _error = null;
+            });
+          }
           final tempDir = await getTemporaryDirectory();
           final decryptedFile = File('${tempDir.path}/decrypted_${widget.message.messageId}.m4a');
           
           if (!await decryptedFile.exists()) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Downloading voice note...'), duration: Duration(seconds: 1)),
-              );
-            }
             final client = HttpClient();
             final request = await client.getUrl(Uri.parse(mediaUrl));
             final response = await request.close();
@@ -1404,11 +1408,17 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             await decryptedFile.writeAsBytes(decryptedBytes);
           }
           localPath = decryptedFile.path;
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed downloading/decrypting voice note: $e')),
-            );
+            setState(() {
+              _isLoading = false;
+              _error = 'Failed to load audio';
+            });
           }
           return;
         }
@@ -1519,25 +1529,58 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             ),
           ],
         ),
-        child: Row(
+        child: _error != null
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    onPressed: _togglePlayback,
+                    icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+                    label: const Text(
+                      'Tap to Retry',
+                      style: TextStyle(
+                        color: VybinTheme.whatsappGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
-              onTap: _togglePlayback,
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: isMe
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : VybinTheme.whatsappTeal.withValues(alpha: 0.2),
-                child: Icon(
-                  isPlayingThis
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: isMe ? Colors.white : VybinTheme.whatsappTeal,
-                  size: 24,
-                ),
-              ),
-            ),
+            _isLoading
+                ? const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: VybinTheme.whatsappGreen),
+                    ),
+                  )
+                : GestureDetector(
+                    onTap: _togglePlayback,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: isMe
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : VybinTheme.whatsappTeal.withValues(alpha: 0.2),
+                      child: Icon(
+                        isPlayingThis
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: isMe ? Colors.white : VybinTheme.whatsappTeal,
+                        size: 24,
+                      ),
+                    ),
+                  ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
