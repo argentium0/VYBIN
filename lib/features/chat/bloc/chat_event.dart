@@ -34,10 +34,20 @@ class SendMessage extends ChatEvent {
   List<Object?> get props => [plaintext, type, senderUid, mediaUrl];
 }
 
-class DeleteMessage extends ChatEvent {
+class DeleteMessageForMeEvent extends ChatEvent {
+  final String messageId;
+  final String myUid;
+
+  const DeleteMessageForMeEvent({required this.messageId, required this.myUid});
+
+  @override
+  List<Object?> get props => [messageId, myUid];
+}
+
+class DeleteMessageForEveryoneEvent extends ChatEvent {
   final String messageId;
 
-  const DeleteMessage(this.messageId);
+  const DeleteMessageForEveryoneEvent({required this.messageId});
 
   @override
   List<Object?> get props => [messageId];

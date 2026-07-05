@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -38,62 +39,100 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    // Simulate network request
-    await Future.delayed(const Duration(milliseconds: 1500));
+    final email = _emailController.text.trim();
 
-    if (!mounted) return;
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (!mounted) return;
 
-    // Show beautiful success dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: VybinTheme.cardCharcoal,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                color: VybinTheme.whatsappGreen,
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Email Sent',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Show beautiful success dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: VybinTheme.cardCharcoal,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: VybinTheme.whatsappGreen,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Email Sent',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Text(
+              'A password reset link has been successfully sent to $email. '
+              'Please check your inbox to continue.',
+              style: const TextStyle(color: VybinTheme.secondaryText, fontSize: 14),
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: VybinTheme.whatsappGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop(); // dismiss dialog
+                  context.go('/login'); // navigate to login
+                },
+                child: const Text('Back to Login'),
               ),
             ],
-          ),
-          content: const Text(
-            'We have simulated sending a password reset link to your email. '
-            'Please check your inbox to continue.',
-            style: TextStyle(color: VybinTheme.secondaryText, fontSize: 14),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: VybinTheme.whatsappGreen,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(); // dismiss dialog
-                context.go('/login'); // navigate to login
-              },
-              child: const Text('Back to Login'),
-            ),
-          ],
-        );
-      },
-    );
+          );
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      String errorMessage = 'An error occurred. Please try again.';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No user registered with this email address.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'The email address is invalid.';
+      } else if (e.message != null) {
+        errorMessage = e.message!;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: VybinTheme.errorColor,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send reset email: $e'),
+          backgroundColor: VybinTheme.errorColor,
+        ),
+      );
+    }
   }
 
   @override

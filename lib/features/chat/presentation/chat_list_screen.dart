@@ -12,6 +12,7 @@ import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/user_model.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 import 'package:vybin/shared/utils/contact_display_helper.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 
 class ContactDetails {
   final String displayName;
@@ -223,9 +224,30 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
         final unread = conv.unreadCount[myUid] ?? 0;
         final hasLastMessage = conv.lastMessagePreview != null;
-        final lastMessageText = hasLastMessage
-            ? conv.lastMessagePreview!.ciphertext
-            : '';
+
+        String lastMessageText = '';
+        if (hasLastMessage) {
+          final preview = conv.lastMessagePreview!;
+          final myKey = preview.encryptedKeys[myUid];
+          if (myKey != null) {
+            try {
+              final chatRepo = context.read<ChatRepository>();
+              final decrypted = chatRepo.decryptMessage(
+                ciphertext: preview.ciphertext,
+                iv: preview.iv,
+                encryptedKey: myKey,
+              );
+              lastMessageText = decrypted.length > 30
+                  ? '${decrypted.substring(0, 30)}...'
+                  : decrypted;
+            } catch (_) {
+              lastMessageText = '🔒 Encrypted Message';
+            }
+          } else {
+            lastMessageText = '🔒 Encrypted Message';
+          }
+        }
+
         final isSentByMe =
             hasLastMessage && conv.lastMessagePreview!.senderUid == myUid;
 

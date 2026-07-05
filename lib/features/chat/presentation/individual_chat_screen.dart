@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_file/open_file.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -242,6 +246,80 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
+  Future<void> _sendImageAttachment(ImageSource source) async {
+    try {
+      final hasPermission = source == ImageSource.camera
+          ? await _mediaService.requestCameraPermission()
+          : await _mediaService.requestStoragePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${source == ImageSource.camera ? "Camera" : "Gallery"} permission is required.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final file = await _mediaService.pickImage(source);
+      if (file == null) return;
+
+      final compressed = await _mediaService.compressImage(file);
+      final finalFile = compressed ?? file;
+
+      _chatBloc.add(
+        SendMessage(
+          plaintext: 'Sent an image 📷',
+          type: 'image',
+          senderUid: _currentUserId,
+          mediaUrl: finalFile.path,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendDocumentAttachment() async {
+    try {
+      final hasPermission = await _mediaService.requestStoragePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Storage permission is required.')),
+          );
+        }
+        return;
+      }
+
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
+      if (result == null || result.files.single.path == null) return;
+      final filePath = result.files.single.path!;
+
+      _chatBloc.add(
+        SendMessage(
+          plaintext: 'Sent a document 📎',
+          type: 'document',
+          senderUid: _currentUserId,
+          mediaUrl: filePath,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking document: $e')),
+        );
+      }
+    }
+  }
+
   void _showMediaBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -263,14 +341,16 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 label: 'Camera',
                 onTap: () {
                   Navigator.pop(context);
+                  _sendImageAttachment(ImageSource.camera);
                 },
               ),
               _buildMediaOption(
-                icon: Icons.mic,
+                icon: Icons.photo_library,
                 color: VybinTheme.whatsappTeal,
-                label: 'Audio',
+                label: 'Gallery',
                 onTap: () {
                   Navigator.pop(context);
+                  _sendImageAttachment(ImageSource.gallery);
                 },
               ),
               _buildMediaOption(
@@ -279,6 +359,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 label: 'Document',
                 onTap: () {
                   Navigator.pop(context);
+                  _sendDocumentAttachment();
                 },
               ),
             ],
@@ -337,58 +418,71 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               final statusText = _formatPresence(user);
               final isOnline = user?.onlineStatus == 'online';
 
-              return Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: VybinTheme.whatsappTeal,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+              return GestureDetector(
+                onTap: () {
+                  if (user != null) {
+                    context.push(
+                      '/chat/contact-profile',
+                      extra: {
+                        'user': user,
+                        'conversationId': widget.conversationId,
+                      },
+                    );
+                  }
+                },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: VybinTheme.whatsappTeal,
+                      child: Text(
+                        initials,
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: VybinApp.showActivityStatusNotifier,
-                        builder: (context, showStatus, _) {
-                          if (!showStatus || statusText.isEmpty) return const SizedBox.shrink();
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayName,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        ValueListenableBuilder<bool>(
+                          valueListenable: VybinApp.showActivityStatusNotifier,
+                          builder: (context, showStatus, _) {
+                            if (!showStatus || statusText.isEmpty) return const SizedBox.shrink();
 
-                          return Row(
-                            children: [
-                              if (isOnline) ...[
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: VybinTheme.neonHighlight,
-                                    shape: BoxShape.circle,
+                            return Row(
+                              children: [
+                                if (isOnline) ...[
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: VybinTheme.neonHighlight,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                Text(
+                                  statusText,
+                                  style: VybinTheme.caption.copyWith(
+                                    color: isOnline 
+                                        ? VybinTheme.neonHighlight 
+                                        : VybinTheme.secondaryText,
                                   ),
                                 ),
-                                const SizedBox(width: 4),
                               ],
-                              Text(
-                                statusText,
-                                style: VybinTheme.caption.copyWith(
-                                  color: isOnline 
-                                      ? VybinTheme.neonHighlight 
-                                      : VybinTheme.secondaryText,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -487,73 +581,178 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   }
 
   Widget _buildChatBubble(Message message, bool isMe) {
+    final isDeleted = message.deletedForEveryone || message.plaintext == '🚫 This message was deleted.';
+    if (isDeleted) {
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isMe
+                ? VybinTheme.getSentBubbleColor(context).withValues(alpha: 0.5)
+                : VybinTheme.getReceivedBubbleColor(context).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            '🚫 This message was deleted.',
+            style: TextStyle(
+              color: Colors.white60,
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget bubbleChild;
     if (message.type == 'voice') {
-      return VoiceMessageBubble(
+      bubbleChild = VoiceMessageBubble(
         message: message,
         isMe: isMe,
         mediaService: _mediaService,
       );
+    } else if (message.type == 'image') {
+      bubbleChild = ImageMessageBubble(
+        message: message,
+        isMe: isMe,
+        currentUserId: _currentUserId,
+      );
+    } else if (message.type == 'document') {
+      bubbleChild = DocumentMessageBubble(
+        message: message,
+        isMe: isMe,
+        currentUserId: _currentUserId,
+      );
+    } else {
+      bubbleChild = Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isMe
+                ? VybinTheme.getSentBubbleColor(context)
+                : VybinTheme.getReceivedBubbleColor(context),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(8),
+              topRight: const Radius.circular(8),
+              bottomLeft: Radius.circular(isMe ? 8 : 0),
+              bottomRight: Radius.circular(isMe ? 0 : 8),
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x21000000),
+                blurRadius: 1,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                message.plaintext ?? '',
+                style: VybinTheme.messageText.copyWith(
+                  color: isMe
+                      ? Colors.white
+                      : (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black87),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.timestamp),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isMe
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : VybinTheme.secondaryText,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    _buildStatusTicks(message.status),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isMe
-              ? VybinTheme.getSentBubbleColor(context)
-              : VybinTheme.getReceivedBubbleColor(context),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(8),
-            topRight: const Radius.circular(8),
-            bottomLeft: Radius.circular(isMe ? 8 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 8),
+    return GestureDetector(
+      onLongPress: () => _showDeleteMessageBottomSheet(message, isMe),
+      child: bubbleChild,
+    );
+  }
+
+  void _showDeleteMessageBottomSheet(Message message, bool isMe) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x21000000),
-              blurRadius: 1,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message.plaintext ?? '',
-              style: VybinTheme.messageText.copyWith(
-                color: isMe
-                    ? Colors.white
-                    : (Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatTime(message.timestamp),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isMe
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : VybinTheme.secondaryText,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Delete Message?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-                if (isMe) ...[
-                  const SizedBox(width: 4),
-                  _buildStatusTicks(message.status),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: VybinTheme.errorColor),
+                title: const Text('Delete for Me', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _chatBloc.add(
+                    DeleteMessageForMeEvent(
+                      messageId: message.messageId,
+                      myUid: _currentUserId,
+                    ),
+                  );
+                },
+              ),
+              if (isMe)
+                ListTile(
+                  leading: const Icon(Icons.delete_forever, color: VybinTheme.errorColor),
+                  title: const Text('Delete for Everyone', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _chatBloc.add(
+                      DeleteMessageForEveryoneEvent(
+                        messageId: message.messageId,
+                      ),
+                    );
+                  },
+                ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1108,10 +1307,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   void _initAudioListeners() {
     final player = widget.mediaService.audioPlayer;
+    final mediaId = widget.message.messageId;
 
     _positionSub = player.positionStream.listen((pos) {
-      if (widget.message.mediaUrl != null &&
-          widget.mediaService.currentPlayingUrl == widget.message.mediaUrl) {
+      final currentUrl = widget.mediaService.currentPlayingUrl;
+      final isCurrent = widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      if (isCurrent) {
         if (mounted) {
           setState(() {
             _position = pos;
@@ -1121,8 +1323,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     });
 
     _stateSub = player.playerStateStream.listen((state) {
-      if (widget.message.mediaUrl != null &&
-          widget.mediaService.currentPlayingUrl == widget.message.mediaUrl) {
+      final currentUrl = widget.mediaService.currentPlayingUrl;
+      final isCurrent = widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      if (isCurrent) {
         if (mounted) {
           setState(() {
             _isPlaying = state.playing;
@@ -1157,7 +1361,60 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     final mediaUrl = widget.message.mediaUrl;
 
     if (mediaUrl != null && mediaUrl.isNotEmpty) {
-      final isCurrent = widget.mediaService.currentPlayingUrl == mediaUrl;
+      String localPath = mediaUrl;
+      if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+        try {
+          final tempDir = await getTemporaryDirectory();
+          final decryptedFile = File('${tempDir.path}/decrypted_${widget.message.messageId}.m4a');
+          
+          if (!await decryptedFile.exists()) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Downloading voice note...'), duration: Duration(seconds: 1)),
+              );
+            }
+            final client = HttpClient();
+            final request = await client.getUrl(Uri.parse(mediaUrl));
+            final response = await request.close();
+            if (response.statusCode != 200) {
+              throw Exception('Failed downloading voice note');
+            }
+            final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+
+            final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
+            final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+            final myKey = encryptedKeys[myUid];
+            if (myKey == null) {
+              throw Exception('No key for you');
+            }
+
+            final mediaIv = widget.message.mediaIv;
+            if (mediaIv == null) {
+              throw Exception('No IV');
+            }
+
+            if (!mounted) return;
+            final chatRepo = context.read<ChatRepository>();
+            final decryptedBytes = chatRepo.decryptMediaBytes(
+              encryptedBytes: Uint8List.fromList(encryptedBytes),
+              iv: mediaIv,
+              encryptedKey: myKey,
+            );
+
+            await decryptedFile.writeAsBytes(decryptedBytes);
+          }
+          localPath = decryptedFile.path;
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed downloading/decrypting voice note: $e')),
+            );
+          }
+          return;
+        }
+      }
+
+      final isCurrent = widget.mediaService.currentPlayingUrl == localPath;
       if (isCurrent && _isPlaying) {
         await widget.mediaService.stopAudio();
       } else {
@@ -1165,7 +1422,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           await widget.mediaService.stopAudio();
         }
         try {
-          await widget.mediaService.playAudio(mediaUrl);
+          await widget.mediaService.playAudio(localPath);
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(
@@ -1364,5 +1621,486 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         ),
       ),
     );
+  }
+}
+
+class ImageMessageBubble extends StatefulWidget {
+  final Message message;
+  final bool isMe;
+  final String currentUserId;
+
+  const ImageMessageBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    required this.currentUserId,
+  });
+
+  @override
+  State<ImageMessageBubble> createState() => _ImageMessageBubbleState();
+}
+
+class _ImageMessageBubbleState extends State<ImageMessageBubble> {
+  bool _isLoading = false;
+  String? _error;
+  Uint8List? _decryptedBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAndDecryptImage();
+  }
+
+  Future<void> _loadAndDecryptImage() async {
+    final mediaUrl = widget.message.mediaUrl;
+    if (mediaUrl == null || mediaUrl.isEmpty) {
+      setState(() {
+        _error = 'No media URL';
+      });
+      return;
+    }
+
+    final filename = widget.message.mediaOriginalFilename ?? 'image.jpg';
+    final messageId = widget.message.messageId;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+
+      // 1. Check if the file exists in the local cache
+      if (await cacheFile.exists()) {
+        final bytes = await cacheFile.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _decryptedBytes = bytes;
+          });
+        }
+        return;
+      }
+
+      // 2. Download encrypted bytes
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+        });
+      }
+
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(mediaUrl));
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw Exception('Download failed: Status ${response.statusCode}');
+      }
+      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+
+      // 3. Retrieve wrapped AES key
+      final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
+      final myKey = encryptedKeys[widget.currentUserId];
+      if (myKey == null) {
+        throw Exception('Access key not found for current user.');
+      }
+
+      final mediaIv = widget.message.mediaIv;
+      if (mediaIv == null || mediaIv.isEmpty) {
+        throw Exception('Missing IV');
+      }
+
+      // 4. Decrypt in memory
+      if (!mounted) return;
+      final chatRepo = context.read<ChatRepository>();
+      final decrypted = chatRepo.decryptMediaBytes(
+        encryptedBytes: Uint8List.fromList(encryptedBytes),
+        iv: mediaIv,
+        encryptedKey: myKey,
+      );
+
+      // Write to local cache
+      await cacheFile.writeAsBytes(decrypted);
+
+      if (mounted) {
+        setState(() {
+          _decryptedBytes = decrypted;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Decryption failed: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = widget.isMe;
+
+    Widget content;
+    if (_decryptedBytes != null) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          _decryptedBytes!,
+          fit: BoxFit.cover,
+          height: 200,
+          width: double.infinity,
+        ),
+      );
+    } else if (_isLoading) {
+      content = const SizedBox(
+        height: 150,
+        child: Center(
+          child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
+        ),
+      );
+    } else if (_error != null) {
+      content = Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _error!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      content = const SizedBox(height: 150);
+    }
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+        padding: const EdgeInsets.all(4),
+        constraints: const BoxConstraints(maxWidth: 250),
+        decoration: BoxDecoration(
+          color: isMe
+              ? VybinTheme.getSentBubbleColor(context)
+              : VybinTheme.getReceivedBubbleColor(context),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: Radius.circular(isMe ? 12 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x21000000),
+              blurRadius: 1,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            content,
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, right: 8.0, bottom: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatTime(widget.message.timestamp),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isMe
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : VybinTheme.secondaryText,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    _buildStatusTicks(widget.message.status),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _buildStatusTicks(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = VybinTheme.neonBlue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = Colors.white60;
+    } else {
+      icon = Icons.done;
+      color = Colors.white60;
+    }
+    return Icon(icon, size: 14, color: color);
+  }
+}
+
+class DocumentMessageBubble extends StatefulWidget {
+  final Message message;
+  final bool isMe;
+  final String currentUserId;
+
+  const DocumentMessageBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    required this.currentUserId,
+  });
+
+  @override
+  State<DocumentMessageBubble> createState() => _DocumentMessageBubbleState();
+}
+
+class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
+  bool _isLoading = false;
+  String? _error;
+  File? _decryptedFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAndDecryptDocument();
+  }
+
+  Future<void> _loadAndDecryptDocument() async {
+    final mediaUrl = widget.message.mediaUrl;
+    if (mediaUrl == null || mediaUrl.isEmpty) {
+      setState(() {
+        _error = 'No media URL';
+      });
+      return;
+    }
+
+    final filename = widget.message.mediaOriginalFilename ?? 'document.pdf';
+    final messageId = widget.message.messageId;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+
+      // 1. Check if the file exists in the local cache
+      if (await cacheFile.exists()) {
+        if (mounted) {
+          setState(() {
+            _decryptedFile = cacheFile;
+          });
+        }
+        return;
+      }
+
+      // 2. Download encrypted bytes
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+        });
+      }
+
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(mediaUrl));
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw Exception('Download failed: Status ${response.statusCode}');
+      }
+      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+
+      // 3. Retrieve wrapped AES key
+      final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
+      final myKey = encryptedKeys[widget.currentUserId];
+      if (myKey == null) {
+        throw Exception('Access key not found for current user.');
+      }
+
+      final mediaIv = widget.message.mediaIv;
+      if (mediaIv == null || mediaIv.isEmpty) {
+        throw Exception('Missing IV');
+      }
+
+      // 4. Decrypt in memory
+      if (!mounted) return;
+      final chatRepo = context.read<ChatRepository>();
+      final decrypted = chatRepo.decryptMediaBytes(
+        encryptedBytes: Uint8List.fromList(encryptedBytes),
+        iv: mediaIv,
+        encryptedKey: myKey,
+      );
+
+      // Write to local cache
+      await cacheFile.writeAsBytes(decrypted);
+
+      if (mounted) {
+        setState(() {
+          _decryptedFile = cacheFile;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Decryption failed: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openDocument() async {
+    if (_decryptedFile != null) {
+      try {
+        await OpenFile.open(_decryptedFile!.path);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open file: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = widget.isMe;
+    final filename = widget.message.mediaOriginalFilename ?? 'document';
+    final size = widget.message.mediaSize != null
+        ? '${(widget.message.mediaSize! / 1024).toStringAsFixed(1)} KB'
+        : '';
+
+    Widget content;
+    if (_isLoading) {
+      content = const Padding(
+        padding: EdgeInsets.all(12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: VybinTheme.whatsappGreen,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Downloading document...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+          ],
+        ),
+      );
+    } else if (_error != null) {
+      content = Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text(
+          _error!,
+          style: const TextStyle(color: Colors.red, fontSize: 12),
+        ),
+      );
+    } else {
+      content = ListTile(
+        onTap: _openDocument,
+        dense: true,
+        leading: const Icon(Icons.insert_drive_file, color: VybinTheme.whatsappGreen, size: 36),
+        title: Text(
+          filename,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        subtitle: size.isNotEmpty ? Text(size, style: const TextStyle(color: Colors.white70)) : null,
+        trailing: const Icon(Icons.open_in_new, color: Colors.white54, size: 20),
+      );
+    }
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+        constraints: const BoxConstraints(maxWidth: 290),
+        decoration: BoxDecoration(
+          color: isMe
+              ? VybinTheme.getSentBubbleColor(context)
+              : VybinTheme.getReceivedBubbleColor(context),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: Radius.circular(isMe ? 12 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x21000000),
+              blurRadius: 1,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            content,
+            Padding(
+              padding: const EdgeInsets.only(top: 2.0, right: 12.0, bottom: 6.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatTime(widget.message.timestamp),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isMe
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : VybinTheme.secondaryText,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    _buildStatusTicks(widget.message.status),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _buildStatusTicks(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = VybinTheme.neonBlue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = Colors.white60;
+    } else {
+      icon = Icons.done;
+      color = Colors.white60;
+    }
+    return Icon(icon, size: 14, color: color);
   }
 }

@@ -21,6 +21,8 @@ import 'package:vybin/features/settings/presentation/settings_screen.dart';
 import 'package:vybin/features/settings/presentation/account_settings_screen.dart';
 import 'package:vybin/features/settings/presentation/notification_settings_screen.dart';
 import 'package:vybin/features/chat/presentation/key_verification_screen.dart';
+import 'package:vybin/features/chat/presentation/contact_profile_screen.dart';
+import 'package:vybin/shared/models/user_model.dart';
 
 /// Helper to convert BLoC stream updates into a [Listenable] for [GoRouter].
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -152,6 +154,18 @@ class AppRouter {
             return KeyVerificationScreen(
               conversationId: conversationId,
               contactName: extra['contactName'] ?? 'Recipient',
+            );
+          },
+        ),
+        GoRoute(
+          path: '/chat/contact-profile',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>;
+            final user = extra['user'] as UserModel;
+            final conversationId = extra['conversationId'] as String;
+            return ContactProfileScreen(
+              user: user,
+              conversationId: conversationId,
             );
           },
         ),

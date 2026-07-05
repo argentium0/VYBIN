@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:vybin/core/services/encryption_service.dart';
@@ -171,12 +173,12 @@ class ChatRepository {
     await batch.commit();
   }
 
-  /// Sends a media message (image/voice) to a conversation after encrypting it.
+  /// Sends a media message (image/voice/document) to a conversation after encrypting it.
   Future<void> sendMediaMessage({
     required String conversationId,
     required String senderUid,
     required String recipientUid,
-    required String type, // 'image' | 'voice'
+    required String type, // 'image' | 'voice' | 'document'
     required String localFilePath,
     required String senderPubKeyPEM,
     required String recipientPubKeyPEM,
@@ -206,21 +208,40 @@ class ChatRepository {
     final messageDoc = messagesRef.doc();
     final messageId = messageDoc.id;
 
-    // 4. Upload the ENCRYPTED bytes to Firebase Storage
+    final filename = localFilePath.split('/').last.split('\\').last;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    // Write the ciphertext to a temporary file locally
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File('${tempDir.path}/${timestamp}_$filename.enc');
+    await tempFile.writeAsBytes(encryptedBytes);
+
+    // 4. Upload the ENCRYPTED temporary file to Firebase Storage
     final storageRef = FirebaseStorage.instance
         .ref()
-        .child('media')
+        .child('chats')
         .child(conversationId)
-        .child('$messageId.enc');
+        .child('media')
+        .child('${timestamp}_$filename.enc');
 
-    final uploadTask = await storageRef.putData(
-      encryptedBytes,
-      SettableMetadata(contentType: 'application/octet-stream'),
-    );
+    final uploadTask = await storageRef.putFile(tempFile);
     final mediaUrl = await uploadTask.ref.getDownloadURL();
 
+    // Clean up local temporary encrypted file
+    try {
+      await tempFile.delete();
+    } catch (_) {}
+
     // 5. Encrypt placeholder text so decryption in stream does not fail
-    final placeholderText = type == 'image' ? 'Sent an image 📷' : 'Sent a voice message 🎤';
+    String placeholderText;
+    if (type == 'image') {
+      placeholderText = 'Sent an image 📷';
+    } else if (type == 'voice') {
+      placeholderText = 'Sent a voice message 🎤';
+    } else {
+      placeholderText = 'Sent a document 📎';
+    }
+
     final textEncryptionData = _encryptionService.encryptPlaintextWithKey(
       plaintext: placeholderText,
       aesKey: aesKey,
@@ -244,6 +265,8 @@ class ChatRepository {
       mediaIv: mediaIv,
       mediaEncryptedKeys: encryptedKeys,
       mediaSize: mediaBytes.length,
+      mediaMimeType: type == 'image' ? 'image/jpeg' : (type == 'voice' ? 'audio/aac' : 'application/octet-stream'),
+      mediaOriginalFilename: filename,
       deletedFor: const [],
       deletedForEveryone: false,
     );
@@ -257,7 +280,11 @@ class ChatRepository {
     );
 
     final batch = _firestore.batch();
-    batch.set(messageDoc, message.toJson());
+    // Save MessageModel to json, ensuring both type and messageType are stored
+    final messageJson = message.toJson();
+    messageJson['messageType'] = type;
+
+    batch.set(messageDoc, messageJson);
 
     final conversationRef = _firestore.collection('conversations').doc(conversationId);
     batch.update(conversationRef, {
@@ -267,6 +294,32 @@ class ChatRepository {
     });
 
     await batch.commit();
+  }
+
+  /// Decrypts a message ciphertext using the shared/injected encryption service.
+  String decryptMessage({
+    required String ciphertext,
+    required String iv,
+    required String encryptedKey,
+  }) {
+    return _encryptionService.decryptMessage(
+      ciphertextBase64: ciphertext,
+      ivBase64: iv,
+      encryptedSessionKeyBase64: encryptedKey,
+    );
+  }
+
+  /// Decrypts encrypted media bytes using the shared/injected encryption service.
+  Uint8List decryptMediaBytes({
+    required Uint8List encryptedBytes,
+    required String iv,
+    required String encryptedKey,
+  }) {
+    return _encryptionService.decryptMediaBytes(
+      encryptedBytes: encryptedBytes,
+      ivBase64: iv,
+      encryptedSessionKeyBase64: encryptedKey,
+    );
   }
 
   /// Real-time stream of messages in a conversation, decrypted on the fly and filtered by blocked users.
@@ -280,7 +333,11 @@ class ChatRepository {
 
     void emitFiltered() {
       if (controller.isClosed) return;
-      final filtered = currentMessages.where((msg) => !blockedUids.contains(msg.senderUid)).toList();
+      final filtered = currentMessages.where((msg) {
+        if (blockedUids.contains(msg.senderUid)) return false;
+        if (msg.deletedFor.contains(myUid)) return false;
+        return true;
+      }).toList();
       controller.add(filtered);
     }
 
@@ -323,15 +380,19 @@ class ChatRepository {
         final data = doc.data();
         var msg = MessageModel.fromJson(data);
 
-        try {
-          final plaintext = _encryptionService.decryptMessage(
-            ciphertextBase64: msg.ciphertext,
-            ivBase64: msg.iv,
-            encryptedSessionKeyBase64: msg.encryptedKeys[myUid] ?? '',
-          );
-          msg = msg.copyWith(plaintext: () => plaintext);
-        } catch (e) {
-          msg = msg.copyWith(plaintext: () => 'Error decrypting message');
+        if (msg.deletedForEveryone || data['isDeleted'] == true) {
+          msg = msg.copyWith(plaintext: () => '🚫 This message was deleted.');
+        } else {
+          try {
+            final plaintext = _encryptionService.decryptMessage(
+              ciphertextBase64: msg.ciphertext,
+              ivBase64: msg.iv,
+              encryptedSessionKeyBase64: msg.encryptedKeys[myUid] ?? '',
+            );
+            msg = msg.copyWith(plaintext: () => plaintext);
+          } catch (e) {
+            msg = msg.copyWith(plaintext: () => 'Error decrypting message');
+          }
         }
 
         return msg;
@@ -496,6 +557,41 @@ class ChatRepository {
       'reason': reason,
       'timestamp': FieldValue.serverTimestamp(),
       'type': 'metadata_only',
+    });
+  }
+
+  /// Soft deletes a message for the current user locally.
+  Future<void> deleteMessageForMe({
+    required String conversationId,
+    required String messageId,
+    required String myUid,
+  }) async {
+    await _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+      'deletedFor': FieldValue.arrayUnion([myUid]),
+    });
+  }
+
+  /// Soft deletes a message for everyone.
+  Future<void> deleteMessageForEveryone({
+    required String conversationId,
+    required String messageId,
+  }) async {
+    await _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+      'deletedForEveryone': true,
+      'isDeleted': true,
+      'ciphertext': '',
+      'mediaUrl': FieldValue.delete(),
+      'deletedForEveryoneAt': FieldValue.serverTimestamp(),
     });
   }
 }

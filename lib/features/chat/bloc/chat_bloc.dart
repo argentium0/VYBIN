@@ -23,7 +23,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         super(ChatInitial()) {
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
-    on<DeleteMessage>(_onDeleteMessage);
+    on<DeleteMessageForMeEvent>(_onDeleteMessageForMe);
+    on<DeleteMessageForEveryoneEvent>(_onDeleteMessageForEveryone);
     on<UpdateMessagesReceived>(_onUpdateMessagesReceived);
   }
 
@@ -85,7 +86,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             senderPubKeyPEM: _senderUser!.publicKey,
             recipientPubKeyPEM: _recipientUser!.publicKey,
           );
-        } else if (event.type == 'voice' || event.type == 'image') {
+        } else if (event.type == 'voice' || event.type == 'image' || event.type == 'document') {
           await _chatRepository.sendMediaMessage(
             conversationId: currentState.conversationId,
             senderUid: _currentUid,
@@ -102,8 +103,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  void _onDeleteMessage(DeleteMessage event, Emitter<ChatState> emit) {
-    // Soft delete can be handled or ignored in local UI state for now
+  Future<void> _onDeleteMessageForMe(DeleteMessageForMeEvent event, Emitter<ChatState> emit) async {
+    final currentState = state;
+    if (currentState is ChatLoaded) {
+      try {
+        await _chatRepository.deleteMessageForMe(
+          conversationId: currentState.conversationId,
+          messageId: event.messageId,
+          myUid: event.myUid,
+        );
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _onDeleteMessageForEveryone(DeleteMessageForEveryoneEvent event, Emitter<ChatState> emit) async {
+    final currentState = state;
+    if (currentState is ChatLoaded) {
+      try {
+        await _chatRepository.deleteMessageForEveryone(
+          conversationId: currentState.conversationId,
+          messageId: event.messageId,
+        );
+      } catch (_) {}
+    }
   }
 
   Message _mapModelToMessage(MessageModel model) {
