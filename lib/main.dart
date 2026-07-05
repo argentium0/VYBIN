@@ -15,6 +15,55 @@ import 'package:vybin/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Override Flutter's default error widget to avoid Red Screen of Death
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    bool isRelease = const bool.fromEnvironment('dart.vm.product');
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Material(
+        color: const Color(0xFF121212),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFFF5252),
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Oops, something went wrong.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (!isRelease) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    details.exceptionAsString(),
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initialize();
   FirebaseMessaging.onBackgroundMessage(anonymizedBackgroundMessageHandler);

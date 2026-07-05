@@ -402,6 +402,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           title: StreamBuilder<UserModel?>(
             stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
             builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Text(
+                  'Unable to load contact',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                );
+              }
               final user = snapshot.data;
               final customName = localContactAliases[otherUid];
               final username = user?.username ?? otherUid;
