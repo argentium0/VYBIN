@@ -165,6 +165,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           downloadUrl = await _authRepository.uploadProfilePhoto(
             uid: currentState.user.uid,
             localPath: event.localPhotoPath!,
+            existingPhotoUrl: currentState.user.profilePhotoUrl,
           );
         }
 

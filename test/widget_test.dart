@@ -51,6 +51,7 @@ class MockAuthRepository implements AuthRepository {
   Future<String> uploadProfilePhoto({
     required String uid,
     required String localPath,
+    String? existingPhotoUrl,
   }) async {
     return 'https://example.com/mock_profile_photo.jpg';
   }

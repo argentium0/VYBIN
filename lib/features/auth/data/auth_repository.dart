@@ -303,6 +303,7 @@ class AuthRepository {
   Future<String> uploadProfilePhoto({
     required String uid,
     required String localPath,
+    String? existingPhotoUrl,
   }) async {
     // Stub or bypass if running in unit tests where Firebase is not initialized
     if (Firebase.apps.isEmpty) {
@@ -328,21 +329,42 @@ class AuthRepository {
     // Upload to Firebase Storage
     final ref = FirebaseStorage.instance.ref().child('users').child(uid).child('profile_picture.jpg');
     
+    final isUrlPlaceholder = existingPhotoUrl == null || 
+        existingPhotoUrl.trim().isEmpty || 
+        existingPhotoUrl.toLowerCase().contains('placeholder') || 
+        existingPhotoUrl.toLowerCase().contains('default') || 
+        existingPhotoUrl.toLowerCase().contains('example.com') || 
+        existingPhotoUrl.toLowerCase().contains('mock');
+
+    if (!isUrlPlaceholder) {
+      try {
+        await ref.delete();
+      } on FirebaseException catch (e) {
+        final code = e.code.toLowerCase();
+        final msg = e.message?.toLowerCase() ?? '';
+        if (!code.contains('object-not-found') && !msg.contains('object-not-found')) {
+          rethrow;
+        }
+      } catch (_) {
+        // Gracefully bypass
+      }
+    }
+
     try {
-      await ref.delete();
+      final uploadTask = ref.putFile(File(compressedFile.path));
+      await uploadTask;
+      return await ref.getDownloadURL();
     } on FirebaseException catch (e) {
       final code = e.code.toLowerCase();
       final msg = e.message?.toLowerCase() ?? '';
-      if (!code.contains('object-not-found') && !msg.contains('object-not-found')) {
-        rethrow;
+      if (code.contains('object-not-found') || msg.contains('object-not-found') || code.contains('not-found')) {
+        // Treat as first-time creation: retry uploading
+        final uploadTask = ref.putFile(File(compressedFile.path));
+        await uploadTask;
+        return await ref.getDownloadURL();
       }
-    } catch (_) {
-      // Gracefully bypass
+      rethrow;
     }
-
-    final uploadTask = ref.putFile(File(compressedFile.path));
-    await uploadTask;
-    return await ref.getDownloadURL();
   }
 
   /// Compresses and uploads a profile image file for the currently authenticated user.
@@ -353,10 +375,21 @@ class AuthRepository {
       throw Exception('No authenticated user found for profile image upload.');
     }
     
+    String? existingPhotoUrl;
+    try {
+      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      if (userDoc.exists) {
+        existingPhotoUrl = userDoc.data()?['photoUrl'] ?? userDoc.data()?['profilePhotoUrl'] as String?;
+      }
+    } catch (_) {
+      existingPhotoUrl = currentUser.photoURL;
+    }
+    
     try {
       return await uploadProfilePhoto(
         uid: currentUser.uid,
         localPath: imageFile.path,
+        existingPhotoUrl: existingPhotoUrl,
       );
     } catch (e) {
       throw Exception('Failed to upload profile image: $e');
@@ -392,7 +425,10 @@ class AuthRepository {
       updates['photoUrl'] = profilePhotoUrl; // Write photoUrl for consistency
     }
 
-    await _firestore.collection('users').doc(uid).update(updates);
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set(updates, SetOptions(merge: true));
 
     // Retrieve and return updated model
     final updatedDoc = await _firestore.collection('users').doc(uid).get();

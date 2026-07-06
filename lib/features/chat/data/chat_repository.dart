@@ -225,8 +225,21 @@ class ChatRepository {
         .child('media')
         .child('${timestamp}_$filename.enc');
 
-    final uploadTask = await storageRef.putFile(tempFile);
-    final mediaUrl = await uploadTask.ref.getDownloadURL();
+    String mediaUrl;
+    try {
+      final uploadTask = await storageRef.putFile(tempFile);
+      mediaUrl = await uploadTask.ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      final code = e.code.toLowerCase();
+      final msg = e.message?.toLowerCase() ?? '';
+      if (code.contains('object-not-found') || msg.contains('object-not-found') || code.contains('not-found')) {
+        // Treat as first-time creation: retry uploading
+        final uploadTask = await storageRef.putFile(tempFile);
+        mediaUrl = await uploadTask.ref.getDownloadURL();
+      } else {
+        rethrow;
+      }
+    }
 
     // Clean up local temporary encrypted file
     try {
