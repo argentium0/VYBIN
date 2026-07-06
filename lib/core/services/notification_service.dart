@@ -59,36 +59,43 @@ class NotificationService {
     if (senderUid == null || messageId == null) return;
 
     final myUid = FirebaseAuth.instance.currentUser?.uid;
-    if (myUid == null) return;
+    String? conversationId;
+    if (myUid != null) {
+      final sorted = [senderUid, myUid]..sort();
+      conversationId = sorted.join('_');
 
-    final sorted = [senderUid, myUid]..sort();
-    final conversationId = sorted.join('_');
-
-    // Update message status to 'delivered' in Firestore if currently 'sent' (non-decrypting operation)
-    try {
-      final docRef = FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(conversationId)
-          .collection('messages')
-          .doc(messageId);
-      final doc = await docRef.get();
-      if (doc.exists && doc.data()?['status'] == 'sent') {
-        await docRef.update({
-          'status': 'delivered',
-          'deliveredAt': FieldValue.serverTimestamp(),
-        });
+      // Update message status to 'delivered' in Firestore if currently 'sent' (non-decrypting operation)
+      try {
+        final docRef = FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(conversationId)
+            .collection('messages')
+            .doc(messageId);
+        final doc = await docRef.get();
+        if (doc.exists && doc.data()?['status'] == 'sent') {
+          await docRef.update({
+            'status': 'delivered',
+            'deliveredAt': FieldValue.serverTimestamp(),
+          });
+          await FirebaseFirestore.instance
+              .collection('conversations')
+              .doc(conversationId)
+              .update({
+            'lastMessagePreview.status': 'delivered',
+          });
+        }
+      } catch (e) {
+        debugPrint('Error updating message delivery status in background: $e');
       }
-    } catch (e) {
-      debugPrint('Error updating message delivery status in background: $e');
     }
 
     // Show generic, privacy-respecting notification
     await showNotification(
       id: messageId.hashCode,
-      title: 'New Message Received',
-      body: 'Open VYBIN to decrypt and view.',
+      title: 'VYBIN',
+      body: '🔒 New Encrypted Message',
       payload: jsonEncode({
-        'conversationId': conversationId,
+        if (conversationId != null) 'conversationId': conversationId,
         'senderUid': senderUid,
       }),
     );
@@ -97,8 +104,8 @@ class NotificationService {
   static Future<void> showAnonymizedNotification(String senderUid) async {
     await showNotification(
       id: senderUid.hashCode,
-      title: 'New Message Received',
-      body: 'Open VYBIN to decrypt and view.',
+      title: 'VYBIN',
+      body: '🔒 New Encrypted Message',
     );
   }
 }

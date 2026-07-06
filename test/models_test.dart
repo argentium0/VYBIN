@@ -185,7 +185,8 @@ void main() {
         'encryptedKeys': {
           'user123': 'keyAlice',
           'bob456': 'keyBob',
-        }
+        },
+        'status': 'sent'
       },
       'unreadCount': {
         'user123': 0,
@@ -205,6 +206,7 @@ void main() {
       expect(model.lastMessagePreview, isNotNull);
       expect(model.lastMessagePreview!.senderUid, 'user123');
       expect(model.lastMessagePreview!.ciphertext, 'previewTextB64');
+      expect(model.lastMessagePreview!.status, 'sent');
       expect(model.unreadCount, containsPair('bob456', 2));
       expect(model.unreadCount, containsPair('user123', 0));
       expect(model.mutedBy, contains('bob456'));
@@ -220,6 +222,7 @@ void main() {
       expect(serialized['createdAt'], now.toIso8601String());
       expect(serialized['lastMessageAt'], now.toIso8601String());
       expect(serialized['lastMessagePreview']['senderUid'], 'user123');
+      expect(serialized['lastMessagePreview']['status'], 'sent');
       expect(serialized['unreadCount']['bob456'], 2);
       expect(serialized['mutedBy'], contains('bob456'));
     });

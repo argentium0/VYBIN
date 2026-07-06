@@ -299,7 +299,7 @@ class AuthRepository {
     await _firebaseAuth.signOut();
   }
 
-  /// Compresses a photo and uploads it to Firebase Storage under `users/{uid}/profile_pic.jpg`.
+  /// Compresses a photo and uploads it to Firebase Storage under `users/{uid}/profile_picture.jpg`.
   Future<String> uploadProfilePhoto({
     required String uid,
     required String localPath,
@@ -326,24 +326,27 @@ class AuthRepository {
     }
 
     // Upload to Firebase Storage
-    final ref = FirebaseStorage.instance.ref().child('users').child(uid).child('profile_pic.jpg');
+    final ref = FirebaseStorage.instance.ref().child('users').child(uid).child('profile_picture.jpg');
     
     try {
       await ref.delete();
     } on FirebaseException catch (e) {
-      if (e.code != 'object-not-found' && e.code != 'firebase_storage/object-not-found') {
+      final code = e.code.toLowerCase();
+      final msg = e.message?.toLowerCase() ?? '';
+      if (!code.contains('object-not-found') && !msg.contains('object-not-found')) {
         rethrow;
       }
     } catch (_) {
       // Gracefully bypass
     }
 
-    final uploadTask = await ref.putFile(File(compressedFile.path));
-    return await uploadTask.ref.getDownloadURL();
+    final uploadTask = ref.putFile(File(compressedFile.path));
+    await uploadTask;
+    return await ref.getDownloadURL();
   }
 
   /// Compresses and uploads a profile image file for the currently authenticated user.
-  /// Overwrites the existing profile picture at `users/{uid}/profile_pic.jpg` and returns the download URL.
+  /// Overwrites the existing profile picture at `users/{uid}/profile_picture.jpg` and returns the download URL.
   Future<String> uploadProfileImage(File imageFile) async {
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
@@ -619,6 +622,7 @@ class AuthRepository {
         iv: encryptedData['iv'] as String,
         ciphertext: encryptedData['ciphertext'] as String,
         encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+        status: 'sent',
       );
 
       final batch = _firestore.batch();

@@ -7,6 +7,7 @@ class LastMessagePreview extends Equatable {
   final String iv; // base64
   final String ciphertext; // base64 encrypted text or preview placeholder
   final Map<String, String> encryptedKeys; // Map of uid -> base64 encrypted AES key
+  final String status; // 'sent' | 'delivered' | 'read'
 
   const LastMessagePreview({
     required this.senderUid,
@@ -14,6 +15,7 @@ class LastMessagePreview extends Equatable {
     required this.iv,
     required this.ciphertext,
     required this.encryptedKeys,
+    required this.status,
   });
 
   factory LastMessagePreview.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class LastMessagePreview extends Equatable {
       iv: json['iv'] as String? ?? '',
       ciphertext: json['ciphertext'] as String? ?? '',
       encryptedKeys: keysMap,
+      status: json['status'] as String? ?? 'sent',
     );
   }
 
@@ -40,11 +43,30 @@ class LastMessagePreview extends Equatable {
       'iv': iv,
       'ciphertext': ciphertext,
       'encryptedKeys': encryptedKeys,
+      'status': status,
     };
   }
 
+  LastMessagePreview copyWith({
+    String? senderUid,
+    String? type,
+    String? iv,
+    String? ciphertext,
+    Map<String, String>? encryptedKeys,
+    String? status,
+  }) {
+    return LastMessagePreview(
+      senderUid: senderUid ?? this.senderUid,
+      type: type ?? this.type,
+      iv: iv ?? this.iv,
+      ciphertext: ciphertext ?? this.ciphertext,
+      encryptedKeys: encryptedKeys ?? this.encryptedKeys,
+      status: status ?? this.status,
+    );
+  }
+
   @override
-  List<Object?> get props => [senderUid, type, iv, ciphertext, encryptedKeys];
+  List<Object?> get props => [senderUid, type, iv, ciphertext, encryptedKeys, status];
 }
 
 /// Type-safe, immutable data model representing a chat conversation in project **VYBIN**.

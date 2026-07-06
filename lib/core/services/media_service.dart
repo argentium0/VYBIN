@@ -65,6 +65,14 @@ class MediaService {
     return File(pickedFile.path);
   }
 
+  /// Picks a video from camera or gallery.
+  Future<File?> pickVideo(ImageSource source) async {
+    final XFile? pickedFile = await _imagePicker.pickVideo(source: source);
+    if (pickedFile == null) return null;
+    return File(pickedFile.path);
+  }
+
+
   /// Compresses the image to target size (max 1920px, 85% quality).
   Future<File?> compressImage(File imageFile) async {
     final tempDir = await getTemporaryDirectory();

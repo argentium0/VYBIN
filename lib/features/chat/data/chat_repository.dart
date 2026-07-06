@@ -158,6 +158,7 @@ class ChatRepository {
       iv: encryptedData['iv'] as String,
       ciphertext: encryptedData['ciphertext'] as String,
       encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+      status: 'sent',
     );
 
     final batch = _firestore.batch();
@@ -238,6 +239,8 @@ class ChatRepository {
       placeholderText = 'Sent an image 📷';
     } else if (type == 'voice') {
       placeholderText = 'Sent a voice message 🎤';
+    } else if (type == 'video') {
+      placeholderText = 'Sent a video 🎥';
     } else {
       placeholderText = 'Sent a document 📎';
     }
@@ -265,7 +268,11 @@ class ChatRepository {
       mediaIv: mediaIv,
       mediaEncryptedKeys: encryptedKeys,
       mediaSize: mediaBytes.length,
-      mediaMimeType: type == 'image' ? 'image/jpeg' : (type == 'voice' ? 'audio/aac' : 'application/octet-stream'),
+      mediaMimeType: type == 'image'
+          ? 'image/jpeg'
+          : (type == 'voice'
+              ? 'audio/aac'
+              : (type == 'video' ? 'video/mp4' : 'application/octet-stream')),
       mediaOriginalFilename: filename,
       deletedFor: const [],
       deletedForEveryone: false,
@@ -277,6 +284,7 @@ class ChatRepository {
       iv: textIv,
       ciphertext: textCiphertext,
       encryptedKeys: encryptedKeys,
+      status: 'sent',
     );
 
     final batch = _firestore.batch();
@@ -492,6 +500,13 @@ class ChatRepository {
         .collection('messages')
         .doc(messageId)
         .update(updates);
+
+    await _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .update({
+      'lastMessagePreview.status': status,
+    });
   }
 
   /// Marks all unread incoming messages in a conversation as read.
@@ -523,8 +538,10 @@ class ChatRepository {
       await batch.commit();
       
       // Also update the unread count in conversation document to 0 for current user
+      // and update the lastMessagePreview status to 'read'
       await _firestore.collection('conversations').doc(conversationId).update({
         'unreadCount.$myUid': 0,
+        'lastMessagePreview.status': 'read',
       });
     }
   }

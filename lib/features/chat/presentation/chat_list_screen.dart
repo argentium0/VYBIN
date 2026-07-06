@@ -122,6 +122,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  Widget _buildStatusIcon(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = VybinTheme.neonBlue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = VybinTheme.secondaryText;
+    } else {
+      icon = Icons.check;
+      color = VybinTheme.secondaryText;
+    }
+    return Icon(
+      icon,
+      color: color,
+      size: 16,
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -323,11 +343,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                 )
               else if (isSentByMe)
-                const Icon(
-                  Icons.done_all,
-                  color: VybinTheme.neonBlue,
-                  size: 16,
-                ),
+                _buildStatusIcon(conv.lastMessagePreview!.status),
             ],
           ),
           onTap: () {

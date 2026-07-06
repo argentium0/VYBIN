@@ -287,6 +287,44 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     }
   }
 
+  Future<void> _sendVideoAttachment(ImageSource source) async {
+    try {
+      final hasPermission = source == ImageSource.camera
+          ? await _mediaService.requestCameraPermission()
+          : await _mediaService.requestStoragePermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${source == ImageSource.camera ? "Camera" : "Gallery"} permission is required.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final file = await _mediaService.pickVideo(source);
+      if (file == null) return;
+
+      _chatBloc.add(
+        SendMessage(
+          plaintext: 'Sent a video 🎥',
+          type: 'video',
+          senderUid: _currentUserId,
+          mediaUrl: file.path,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking video: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _sendDocumentAttachment() async {
     try {
       final hasPermission = await _mediaService.requestStoragePermission();
@@ -354,6 +392,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 },
               ),
               _buildMediaOption(
+                icon: Icons.video_library,
+                color: Colors.orange,
+                label: 'Video',
+                onTap: () {
+                  Navigator.pop(context);
+                  _sendVideoAttachment(ImageSource.gallery);
+                },
+              ),
+              _buildMediaOption(
                 icon: Icons.insert_drive_file,
                 color: Colors.deepPurpleAccent,
                 label: 'Document',
@@ -396,7 +443,18 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _chatBloc,
-      child: Scaffold(
+      child: BlocListener<ChatBloc, ChatState>(
+        listener: (context, state) {
+          if (state is ChatError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: VybinTheme.errorColor,
+              ),
+            );
+          }
+        },
+        child: Scaffold(
         appBar: AppBar(
           titleSpacing: 0,
           title: StreamBuilder<UserModel?>(
@@ -583,8 +641,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildChatBubble(Message message, bool isMe) {
     final isDeleted = message.deletedForEveryone || message.plaintext == '🚫 This message was deleted.';
@@ -621,6 +680,12 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
     } else if (message.type == 'image') {
       bubbleChild = ImageMessageBubble(
+        message: message,
+        isMe: isMe,
+        currentUserId: _currentUserId,
+      );
+    } else if (message.type == 'video') {
+      bubbleChild = VideoMessageBubble(
         message: message,
         isMe: isMe,
         currentUserId: _currentUserId,
@@ -2120,6 +2185,291 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         onTap: _openDocument,
         dense: true,
         leading: const Icon(Icons.insert_drive_file, color: VybinTheme.whatsappGreen, size: 36),
+        title: Text(
+          filename,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        subtitle: size.isNotEmpty ? Text(size, style: const TextStyle(color: Colors.white70)) : null,
+        trailing: const Icon(Icons.open_in_new, color: Colors.white54, size: 20),
+      );
+    }
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+        constraints: const BoxConstraints(maxWidth: 290),
+        decoration: BoxDecoration(
+          color: isMe
+              ? VybinTheme.getSentBubbleColor(context)
+              : VybinTheme.getReceivedBubbleColor(context),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: Radius.circular(isMe ? 12 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x21000000),
+              blurRadius: 1,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            content,
+            Padding(
+              padding: const EdgeInsets.only(top: 2.0, right: 12.0, bottom: 6.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatTime(widget.message.timestamp),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isMe
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : VybinTheme.secondaryText,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    _buildStatusTicks(widget.message.status),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _buildStatusTicks(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = VybinTheme.neonBlue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = Colors.white60;
+    } else {
+      icon = Icons.done;
+      color = Colors.white60;
+    }
+    return Icon(icon, size: 14, color: color);
+  }
+}
+
+class VideoMessageBubble extends StatefulWidget {
+  final Message message;
+  final bool isMe;
+  final String currentUserId;
+
+  const VideoMessageBubble({
+    super.key,
+    required this.message,
+    required this.isMe,
+    required this.currentUserId,
+  });
+
+  @override
+  State<VideoMessageBubble> createState() => _VideoMessageBubbleState();
+}
+
+class _VideoMessageBubbleState extends State<VideoMessageBubble> {
+  bool _isLoading = false;
+  String? _error;
+  File? _decryptedFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAndDecryptVideo();
+  }
+
+  Future<void> _loadAndDecryptVideo() async {
+    final mediaUrl = widget.message.mediaUrl;
+    if (mediaUrl == null || mediaUrl.isEmpty) {
+      setState(() {
+        _error = 'No media URL';
+      });
+      return;
+    }
+
+    final filename = widget.message.mediaOriginalFilename ?? 'video.mp4';
+    final messageId = widget.message.messageId;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+
+      // 1. Check if the file exists in the local cache
+      if (await cacheFile.exists()) {
+        if (mounted) {
+          setState(() {
+            _decryptedFile = cacheFile;
+          });
+        }
+        return;
+      }
+
+      // 2. Download encrypted bytes
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+        });
+      }
+
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(mediaUrl));
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw Exception('Download failed: Status ${response.statusCode}');
+      }
+      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+
+      // 3. Retrieve wrapped AES key
+      final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
+      final myKey = encryptedKeys[widget.currentUserId];
+      if (myKey == null) {
+        throw Exception('Access key not found for current user.');
+      }
+
+      final mediaIv = widget.message.mediaIv;
+      if (mediaIv == null || mediaIv.isEmpty) {
+        throw Exception('Missing IV');
+      }
+
+      // 4. Decrypt in memory
+      if (!mounted) return;
+      final chatRepo = context.read<ChatRepository>();
+      final decrypted = chatRepo.decryptMediaBytes(
+        encryptedBytes: Uint8List.fromList(encryptedBytes),
+        iv: mediaIv,
+        encryptedKey: myKey,
+      );
+
+      // Write to local cache
+      await cacheFile.writeAsBytes(decrypted);
+
+      if (mounted) {
+        setState(() {
+          _decryptedFile = cacheFile;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Decryption failed: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openVideo() async {
+    if (_decryptedFile != null) {
+      try {
+        await OpenFile.open(_decryptedFile!.path);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open video: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = widget.isMe;
+    final filename = widget.message.mediaOriginalFilename ?? 'video.mp4';
+    final size = widget.message.mediaSize != null
+        ? '${(widget.message.mediaSize! / (1024 * 1024)).toStringAsFixed(1)} MB'
+        : '';
+
+    Widget content;
+    if (_isLoading) {
+      content = const Padding(
+        padding: EdgeInsets.all(12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: VybinTheme.whatsappGreen,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Downloading video...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+          ],
+        ),
+      );
+    } else if (_error != null) {
+      content = Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: _loadAndDecryptVideo,
+              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              label: const Text(
+                'Retry Download',
+                style: TextStyle(
+                  color: VybinTheme.whatsappGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      content = ListTile(
+        onTap: _openVideo,
+        dense: true,
+        leading: const CircleAvatar(
+          backgroundColor: Colors.orange,
+          child: Icon(Icons.play_arrow, color: Colors.white),
+        ),
         title: Text(
           filename,
           maxLines: 1,

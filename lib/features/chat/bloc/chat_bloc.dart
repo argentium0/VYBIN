@@ -73,6 +73,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (currentState is ChatLoaded) {
       if (_senderUser == null || _recipientUser == null) {
         emit(const ChatError('User profiles not fully loaded.'));
+        // Restore loaded state if it was loaded
+        emit(currentState);
         return;
       }
 
@@ -86,7 +88,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             senderPubKeyPEM: _senderUser!.publicKey,
             recipientPubKeyPEM: _recipientUser!.publicKey,
           );
-        } else if (event.type == 'voice' || event.type == 'image' || event.type == 'document') {
+        } else if (event.type == 'voice' || event.type == 'image' || event.type == 'video' || event.type == 'document') {
           await _chatRepository.sendMediaMessage(
             conversationId: currentState.conversationId,
             senderUid: _currentUid,
@@ -98,7 +100,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           );
         }
       } catch (e) {
-        // Emit error or handle it gracefully
+        emit(ChatError('Failed to send message: $e'));
+        emit(currentState);
       }
     }
   }
