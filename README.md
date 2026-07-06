@@ -7,60 +7,61 @@ VYBIN is an offline-first, decentralized, and end-to-end encrypted (E2EE) messag
 <img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/990b0ce2-4fbd-415d-8c50-6c9d49d5588b" />
 <img width="320" height="550" alt="image" src="https://github.com/user-attachments/assets/389a1955-6c27-40d2-8cc7-6e75cbb31f80" />
 
+---
 
+## Capabilities & Core Features
+
+VYBIN provides a fully functional, privacy-first messaging architecture featuring:
+
+### Cryptographic Core & Identity Security
+* **Client-Side Key Generation**: Generates RSA-2048 keypairs locally. The public key is published for user discovery, while the private key is stored securely on-device.
+* **Hybrid Encryption Pipeline**: Combines local AES-256-GCM symmetric block encryption for message contents with RSA key encapsulation for secure distribution of the AES key.
+* **PBKDF2 Password Derivation**: Derives an encryption key from the user's account password to encrypt the RSA private key prior to storage.
+* **Hardware-Backed Secure Storage**: Saves encrypted private keys using Android Keystore / iOS Keychain via `flutter_secure_storage`.
+* **Identity Verification**: Enables safety numbers/fingerprints verification to ensure communication security.
+* **Identity Recovery & Migration**: Identity Import Screen allows users to manually import/restore their cryptographic identity using recovery parameters.
+
+### Real-Time Messaging & Statuses
+* **Real-time 1-on-1 Chat**: Low-latency message synchronization powered by Firestore snapshot streams.
+* **Message Status Receipts**: Visual status ticks for sent, delivered, and read status updates.
+* **On-the-Fly Decryption**: Locally decrypts the latest message in the Chat List preview, keeping Firestore unaware of the message content.
+* **State Management**: Clean architectural boundaries separation via `flutter_bloc` (`AuthBloc`, `ChatBloc`, `ChatListBloc`).
+
+### Encrypted Media Transmission
+* **Photos**: In-app photo picking, image compression, local AES encryption, Firebase Storage transfer, and local decryption.
+* **Voice Notes**: Encrypted audio recording, transmission, and playback using device audio frameworks.
+* **Videos**: Localized encryption and upload, status-aware downloader (with download progress and error states), and a retry-mechanism for download failures.
+* **Documents**: Support for picking, local encryption, downloading, and local opening of PDF documents.
+
+### Push Notifications & Background Sync
+* **Metadata-Only Cloud Payloads**: Decentralized notifications via Firebase Cloud Functions where push payloads exclude raw ciphertext.
+* **Local Notifications**: Direct-to-system notifications via `flutter_local_notifications` for both foreground and background states.
+* **Active Chat Silencing**: Automatically tracks active chats to suppress notifications for the chat currently being viewed.
+
+### UI/UX Design System
+* **Material 3 Design**: High-fidelity interface layouts styled similarly to WhatsApp.
+* **Premium Dark Mode**: Custom-tailored Material Design dark theme configurations.
+* **User Settings & Profiles**: Dynamic profile screen, account credentials management, and notification settings.
 
 ---
 
-## 🚀 Capabilities & Core Features (Phase 1 Baseline)
+## Key Dependencies
 
-We have successfully scaffolded and initialized **Phase 1 (UI Development & Local Archetype)** of the application:
-
-*   **GoRouter Navigation Architecture**: Robust shell-based routing structures decoupling routing logic from page trees.
-*   **WhatsApp-Inspired High-Fidelity UI Layouts**: 
-    *   `SplashScreen` for seamless app entry.
-    *   `LoginScreen` and `SignUpScreen` entry gates.
-    *   `ChatListScreen` serving as the main communications hub.
-    *   `IndividualChatScreen` supporting dynamic message threads.
-*   **Dynamic Presentation Components**: Custom chat bubble layouts using Flutter primitives, interactive voice message simulation widgets, and responsive layout scaling.
-*   **High-Contrast Dark Theme Presets**: Harmonious and accessibility-minded dark mode design configurations using tailored Material Design tokens.
-*   **E2EE-Ready Local Data Models**: Data models (`UserModel`, `MessageModel`, and `ConversationModel`) pre-architected to accommodate RSA public keys, Base64 AES-256-GCM ciphertexts, and GCM IV buffers so that data bindings can transition seamlessly into cryptography without refactoring.
+* **State Management**: `flutter_bloc`, `equatable`
+* **Navigation**: `go_router`
+* **Cryptographic Primitives**: `pointycastle`, `flutter_secure_storage`, `crypto`
+* **Media & Hardware Support**: `record`, `just_audio`, `flutter_image_compress`, `image_picker`, `file_picker`, `open_file`, `permission_handler`, `path_provider`
+* **Real-time & Sync**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `firebase_messaging`
+* **Utilities & UI**: `cached_network_image`, `uuid`, `intl`, `share_plus`
 
 ---
 
-## 🛠️ Next Development Stages
-
-Following our technical specification roadmap, we are moving sequentially through the following phases:
-
-### 🟢 Phase 2: Semantic Development (Local Logic & Cryptographic Engine)
-*   **State Management Integration**: Establish `flutter_bloc` structures across all feature modules (e.g., `AuthBloc`, `ChatBloc`) to decouple state mutation logic from presentation views.
-*   **Cryptographic Core Engine**: Implement the `EncryptionService` using the `pointycastle` library to perform client-side RSA-2048 key generation, AES-256-GCM symmetric block encryption/decryption, and PBKDF2 password-based key derivation.
-*   **Local Secure Hardware Storage**: Secure private keys locally using the Android Keystore / iOS Keychain via `flutter_secure_storage`.
-*   **Local Media Processing Services**: Wire up localized audio recording, image compression (`flutter_image_compress`), and file picking interfaces.
-
-### 🟡 Phase 3: Firebase Integration (Live Sync & Cloud Governance)
-*   **Data Channel Operations**: Bind the local logical states to Firebase Authentication, Cloud Firestore database streams, and Firebase Storage bucket structures.
-*   **Real-time Message Pipeline**: Deploy continuous Firestore snapshot listeners for instant message transmission, message state ticks (`sent` / `delivered` / `read`), and automatic remote sync.
-*   **Encrypted Remote Blob Storage**: Enable sending, compressing, and downloading E2EE media files.
-*   **Decentralized Push Notifications**: Implement Firebase Cloud Functions running metadata-only payloads to trigger background push notifications without exposing raw message contents.
-
----
-
-## 📦 Key Dependencies
-
-*   **State Management**: `flutter_bloc`, `equatable`
-*   **Navigation**: `go_router`
-*   **Cryptographic Primitives**: `pointycastle`, `flutter_secure_storage`
-*   **Media Support**: `record`, `just_audio`, `flutter_image_compress`, `image_picker`, `file_picker`
-*   **Utilities**: `cached_network_image`, `uuid`, `intl`
-
----
-
-## 🏃 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-*   Flutter SDK (v3.x.x or higher)
-*   Android Studio / Xcode (for emulation/testing)
+* Flutter SDK (v3.x.x or higher)
+* Android Studio / Xcode (for emulation/testing)
 
 ### Installation & Run
 
