@@ -351,19 +351,15 @@ class AuthRepository {
     }
 
     try {
-      final uploadTask = ref.putFile(File(compressedFile.path));
-      await uploadTask;
+      final uploadTask = await ref.putFile(File(compressedFile.path));
+      if (uploadTask.state != TaskState.success) {
+        throw Exception('Upload failed with state: ${uploadTask.state}');
+      }
       return await ref.getDownloadURL();
     } on FirebaseException catch (e) {
-      final code = e.code.toLowerCase();
-      final msg = e.message?.toLowerCase() ?? '';
-      if (code.contains('object-not-found') || msg.contains('object-not-found') || code.contains('not-found')) {
-        // Treat as first-time creation: retry uploading
-        final uploadTask = ref.putFile(File(compressedFile.path));
-        await uploadTask;
-        return await ref.getDownloadURL();
-      }
-      rethrow;
+      throw Exception('Firebase Storage Error [${e.code}]: ${e.message}');
+    } catch (e) {
+      throw Exception('Unknown Upload Error: $e');
     }
   }
 

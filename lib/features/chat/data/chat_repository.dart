@@ -228,17 +228,14 @@ class ChatRepository {
     String mediaUrl;
     try {
       final uploadTask = await storageRef.putFile(tempFile);
-      mediaUrl = await uploadTask.ref.getDownloadURL();
-    } on FirebaseException catch (e) {
-      final code = e.code.toLowerCase();
-      final msg = e.message?.toLowerCase() ?? '';
-      if (code.contains('object-not-found') || msg.contains('object-not-found') || code.contains('not-found')) {
-        // Treat as first-time creation: retry uploading
-        final uploadTask = await storageRef.putFile(tempFile);
-        mediaUrl = await uploadTask.ref.getDownloadURL();
-      } else {
-        rethrow;
+      if (uploadTask.state != TaskState.success) {
+        throw Exception('Upload failed with state: ${uploadTask.state}');
       }
+      mediaUrl = await storageRef.getDownloadURL();
+    } on FirebaseException catch (e) {
+      throw Exception('Firebase Storage Error [${e.code}]: ${e.message}');
+    } catch (e) {
+      throw Exception('Unknown Upload Error: $e');
     }
 
     // Clean up local temporary encrypted file
