@@ -117,22 +117,30 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final authState = context.read<AuthBloc>().state;
-    final currentUserId = authState is AuthAuthenticated ? authState.user.uid : '';
+    final currentUserId = authState is AuthAuthenticated
+        ? authState.user.uid
+        : '';
 
     return Scaffold(
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Contact Info', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Contact Info',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: StreamBuilder<UserModel?>(
-        stream: context.read<ChatRepository>().getUserStream(widget.userId, currentUserId),
+        stream: context.read<ChatRepository>().getUserStream(
+          widget.userId,
+          currentUserId,
+        ),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
@@ -152,11 +160,11 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
           final fingerprint = _calculateFingerprint(user.publicKey);
 
           // Initials for avatar
-          final cleanName = user.displayName.isNotEmpty 
-              ? user.displayName 
+          final cleanName = user.displayName.isNotEmpty
+              ? user.displayName
               : user.username;
-          final initials = cleanName.length >= 2 
-              ? cleanName.substring(0, 2).toUpperCase() 
+          final initials = cleanName.length >= 2
+              ? cleanName.substring(0, 2).toUpperCase()
               : cleanName.toUpperCase();
 
           return SingleChildScrollView(
@@ -170,10 +178,14 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                       CircleAvatar(
                         radius: 64,
                         backgroundColor: VybinTheme.whatsappTeal,
-                        backgroundImage: (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty)
+                        backgroundImage:
+                            (user.profilePhotoUrl != null &&
+                                user.profilePhotoUrl!.isNotEmpty)
                             ? NetworkImage(user.profilePhotoUrl!)
                             : null,
-                        child: (user.profilePhotoUrl == null || user.profilePhotoUrl!.isEmpty)
+                        child:
+                            (user.profilePhotoUrl == null ||
+                                user.profilePhotoUrl!.isEmpty)
                             ? Text(
                                 initials,
                                 style: const TextStyle(
@@ -216,7 +228,9 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                 const SizedBox(height: 8),
                 // Display Name
                 Text(
-                  user.displayName.isNotEmpty ? user.displayName : 'No Display Name',
+                  user.displayName.isNotEmpty
+                      ? user.displayName
+                      : 'No Display Name',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -276,7 +290,10 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                                   ),
                                 )
                               : IconButton(
-                                  icon: const Icon(Icons.check, color: VybinTheme.whatsappGreen),
+                                  icon: const Icon(
+                                    Icons.check,
+                                    color: VybinTheme.whatsappGreen,
+                                  ),
                                   onPressed: _saveNickname,
                                 ),
                         ),
@@ -309,7 +326,11 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.lock, color: VybinTheme.neonHighlight, size: 18),
+                          Icon(
+                            Icons.lock,
+                            color: VybinTheme.neonHighlight,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Security & Encryption',
@@ -347,7 +368,10 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                         child: Tooltip(
                           message: 'Tap to copy fingerprint',
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.black38,
                               borderRadius: BorderRadius.circular(8),
@@ -371,14 +395,21 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                       const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.verified, color: VybinTheme.neonHighlight, size: 14),
+                          Icon(
+                            Icons.verified,
+                            color: VybinTheme.neonHighlight,
+                            size: 14,
+                          ),
                           SizedBox(width: 6),
                           Text(
                             'RSA-OAEP SHA-256 Key fingerprint',
-                            style: TextStyle(color: Colors.white54, fontSize: 10),
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 10,
+                            ),
                           ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -390,5 +421,4 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
       ),
     );
   }
-}
 }
