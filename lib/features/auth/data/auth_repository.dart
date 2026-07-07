@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:vybin/core/services/media_service.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -326,40 +326,16 @@ class AuthRepository {
       throw Exception('Failed to compress profile photo');
     }
 
-    // Upload to Firebase Storage
-    final ref = FirebaseStorage.instance.ref().child('users').child(uid).child('profile_picture.jpg');
-    
-    final isUrlPlaceholder = existingPhotoUrl == null || 
-        existingPhotoUrl.trim().isEmpty || 
-        existingPhotoUrl.toLowerCase().contains('placeholder') || 
-        existingPhotoUrl.toLowerCase().contains('default') || 
-        existingPhotoUrl.toLowerCase().contains('example.com') || 
-        existingPhotoUrl.toLowerCase().contains('mock');
-
-    if (!isUrlPlaceholder) {
-      try {
-        await ref.delete();
-      } on FirebaseException catch (e) {
-        final code = e.code.toLowerCase();
-        final msg = e.message?.toLowerCase() ?? '';
-        if (!code.contains('object-not-found') && !msg.contains('object-not-found')) {
-          rethrow;
-        }
-      } catch (_) {
-        // Gracefully bypass
-      }
-    }
-
+    // Upload to Cloudinary
+    final mediaService = MediaService();
     try {
-      final uploadTask = await ref.putFile(File(compressedFile.path));
-      if (uploadTask.state != TaskState.success) {
-        throw Exception('Upload failed with state: ${uploadTask.state}');
+      final downloadUrl = await mediaService.uploadToCloudinary(File(compressedFile.path));
+      if (downloadUrl == null) {
+        throw Exception('Failed to upload profile photo to Cloudinary');
       }
-      return await ref.getDownloadURL();
-    } on FirebaseException catch (e) {
-      throw Exception('Firebase Storage Error [${e.code}]: ${e.message}');
+      return downloadUrl;
     } catch (e) {
-      throw Exception('Unknown Upload Error: $e');
+      throw Exception('Unknown Upload Error: \$e');
     }
   }
 

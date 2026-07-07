@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
 import 'package:vybin/core/services/encryption_service.dart';
 import 'package:vybin/core/services/media_service.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
@@ -183,6 +183,7 @@ class ChatRepository {
     required String localFilePath,
     required String senderPubKeyPEM,
     required String recipientPubKeyPEM,
+    int? durationMs,
   }) async {
     // 1. Get bytes from MediaService
     final mediaBytes = await _mediaService.getMediaBytes(localFilePath);
@@ -217,25 +218,10 @@ class ChatRepository {
     final tempFile = File('${tempDir.path}/${timestamp}_$filename.enc');
     await tempFile.writeAsBytes(encryptedBytes);
 
-    // 4. Upload the ENCRYPTED temporary file to Firebase Storage
-    final storageRef = FirebaseStorage.instance
-        .ref()
-        .child('chats')
-        .child(conversationId)
-        .child('media')
-        .child('${timestamp}_$filename.enc');
-
-    String mediaUrl;
-    try {
-      final uploadTask = await storageRef.putFile(tempFile);
-      if (uploadTask.state != TaskState.success) {
-        throw Exception('Upload failed with state: ${uploadTask.state}');
-      }
-      mediaUrl = await storageRef.getDownloadURL();
-    } on FirebaseException catch (e) {
-      throw Exception('Firebase Storage Error [${e.code}]: ${e.message}');
-    } catch (e) {
-      throw Exception('Unknown Upload Error: $e');
+    // 4. Upload the ENCRYPTED temporary file to Cloudinary
+    final String? mediaUrl = await _mediaService.uploadToCloudinary(tempFile);
+    if (mediaUrl == null) {
+      throw Exception('Failed to upload media to Cloudinary');
     }
 
     // Clean up local temporary encrypted file
@@ -284,6 +270,7 @@ class ChatRepository {
               ? 'audio/aac'
               : (type == 'video' ? 'video/mp4' : 'application/octet-stream')),
       mediaOriginalFilename: filename,
+      durationMs: durationMs,
       deletedFor: const [],
       deletedForEveryone: false,
     );
@@ -398,8 +385,11 @@ class ChatRepository {
         final data = doc.data();
         var msg = MessageModel.fromJson(data);
 
-        if (msg.deletedForEveryone || data['isDeleted'] == true) {
-          msg = msg.copyWith(plaintext: () => '🚫 This message was deleted.');
+        if (msg.deletedForEveryone || msg.isDeleted || data['isDeleted'] == true) {
+          msg = msg.copyWith(
+            plaintext: () => '🚫 This message was deleted.',
+            isDeleted: true,
+          );
         } else {
           try {
             final plaintext = _encryptionService.decryptMessage(

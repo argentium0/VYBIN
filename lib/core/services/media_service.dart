@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:record/record.dart';
@@ -153,5 +155,30 @@ class MediaService {
   void dispose() {
     _audioRecorder.dispose();
     _audioPlayer.dispose();
+  }
+
+  /// Uploads file to Cloudinary and returns the secure URL
+  Future<String?> uploadToCloudinary(File file, {bool isEncrypted = false}) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.cloudinary.com/v1_1/pshkpybp/auto/upload'),
+      );
+      request.fields['upload_preset'] = 'vybin_unsigned';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonResponse = jsonDecode(responseData);
+        return jsonResponse['secure_url'] as String?;
+      } else {
+        print('Cloudinary upload failed: \${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception during Cloudinary upload: \$e');
+      return null;
+    }
   }
 }

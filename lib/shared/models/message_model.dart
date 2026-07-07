@@ -28,11 +28,13 @@ class MessageModel extends Equatable {
   final int? mediaSize; // bytes
   final String? mediaMimeType;
   final String? mediaOriginalFilename; // Encrypted/plaintext original filename
+  final int? durationMs; // Voice recording duration in milliseconds
   
   // Soft delete fields
   final List<String> deletedFor; // List of uids who deleted this message for themselves
   final bool deletedForEveryone;
   final DateTime? deletedForEveryoneAt;
+  final bool isDeleted;
 
   const MessageModel({
     required this.messageId,
@@ -52,9 +54,11 @@ class MessageModel extends Equatable {
     this.mediaSize,
     this.mediaMimeType,
     this.mediaOriginalFilename,
+    this.durationMs,
     required this.deletedFor,
     required this.deletedForEveryone,
     this.deletedForEveryoneAt,
+    this.isDeleted = false,
   });
 
   /// Factory constructor to create a [MessageModel] from a JSON map (e.g. Firestore document).
@@ -93,12 +97,14 @@ class MessageModel extends Equatable {
       mediaSize: json['mediaSize'] as int?,
       mediaMimeType: json['mediaMimeType'] as String?,
       mediaOriginalFilename: json['mediaOriginalFilename'] as String?,
+      durationMs: json['durationMs'] as int?,
       deletedFor: (json['deletedFor'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
       deletedForEveryone: json['deletedForEveryone'] as bool? ?? false,
       deletedForEveryoneAt: _parseNullableDateTime(json['deletedForEveryoneAt']),
+      isDeleted: json['isDeleted'] as bool? ?? false,
     );
   }
 
@@ -121,9 +127,11 @@ class MessageModel extends Equatable {
       'mediaSize': mediaSize,
       'mediaMimeType': mediaMimeType,
       'mediaOriginalFilename': mediaOriginalFilename,
+      'durationMs': durationMs,
       'deletedFor': deletedFor,
       'deletedForEveryone': deletedForEveryone,
       'deletedForEveryoneAt': deletedForEveryoneAt?.toIso8601String(),
+      'isDeleted': isDeleted,
     };
   }
 
@@ -146,9 +154,11 @@ class MessageModel extends Equatable {
     int? Function()? mediaSize,
     String? Function()? mediaMimeType,
     String? Function()? mediaOriginalFilename,
+    int? Function()? durationMs,
     List<String>? deletedFor,
     bool? deletedForEveryone,
     DateTime? Function()? deletedForEveryoneAt,
+    bool? isDeleted,
   }) {
     return MessageModel(
       messageId: messageId ?? this.messageId,
@@ -168,9 +178,11 @@ class MessageModel extends Equatable {
       mediaSize: mediaSize != null ? mediaSize() : this.mediaSize,
       mediaMimeType: mediaMimeType != null ? mediaMimeType() : this.mediaMimeType,
       mediaOriginalFilename: mediaOriginalFilename != null ? mediaOriginalFilename() : this.mediaOriginalFilename,
+      durationMs: durationMs != null ? durationMs() : this.durationMs,
       deletedFor: deletedFor ?? this.deletedFor,
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
       deletedForEveryoneAt: deletedForEveryoneAt != null ? deletedForEveryoneAt() : this.deletedForEveryoneAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
@@ -193,9 +205,11 @@ class MessageModel extends Equatable {
         mediaSize,
         mediaMimeType,
         mediaOriginalFilename,
+        durationMs,
         deletedFor,
         deletedForEveryone,
         deletedForEveryoneAt,
+        isDeleted,
       ];
 
   /// Utility method to parse dynamic date fields from JSON/Firestore.

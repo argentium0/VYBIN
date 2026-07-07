@@ -97,6 +97,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             localFilePath: event.mediaUrl!,
             senderPubKeyPEM: _senderUser!.publicKey,
             recipientPubKeyPEM: _recipientUser!.publicKey,
+            durationMs: event.durationMs,
           );
         }
       } catch (e) {
@@ -150,9 +151,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       mediaSize: model.mediaSize,
       mediaMimeType: model.mediaMimeType,
       mediaOriginalFilename: model.mediaOriginalFilename,
+      durationMs: model.durationMs,
       deletedFor: model.deletedFor,
       deletedForEveryone: model.deletedForEveryone,
       deletedForEveryoneAt: model.deletedForEveryoneAt,
+      isDeleted: model.isDeleted,
     );
   }
 

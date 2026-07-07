@@ -119,6 +119,7 @@ void main() {
       expect(model.mediaUrl, isNull);
       expect(model.deletedFor, isEmpty);
       expect(model.deletedForEveryone, isFalse);
+      expect(model.isDeleted, isFalse);
     });
 
     test('should support media fields when populated', () {
@@ -131,7 +132,8 @@ void main() {
         }
         ..['mediaSize'] = 1024
         ..['mediaMimeType'] = 'image/png'
-        ..['mediaOriginalFilename'] = 'enc_photo.png';
+        ..['mediaOriginalFilename'] = 'enc_photo.png'
+        ..['durationMs'] = 5000;
 
       final model = MessageModel.fromJson(mediaJson);
       expect(model.type, 'image');
@@ -141,6 +143,7 @@ void main() {
       expect(model.mediaSize, 1024);
       expect(model.mediaMimeType, 'image/png');
       expect(model.mediaOriginalFilename, 'enc_photo.png');
+      expect(model.durationMs, 5000);
     });
 
     test('should serialize correctly to json', () {
@@ -158,14 +161,16 @@ void main() {
       expect(serialized['deliveredAt'], now.toIso8601String());
       expect(serialized['readAt'], now.toIso8601String());
       expect(serialized['deletedForEveryone'], isFalse);
+      expect(serialized['isDeleted'], isFalse);
     });
 
     test('should support copyWith', () {
       final model = MessageModel.fromJson(messageJson);
-      final copied = model.copyWith(status: 'delivered', readAt: () => null);
+      final copied = model.copyWith(status: 'delivered', readAt: () => null, isDeleted: true);
 
       expect(copied.status, 'delivered');
       expect(copied.readAt, isNull);
+      expect(copied.isDeleted, isTrue);
     });
   });
 

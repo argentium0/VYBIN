@@ -22,16 +22,18 @@ class SendMessage extends ChatEvent {
   final String type; // 'text', 'image', 'voice', 'document'
   final String senderUid;
   final String? mediaUrl;
+  final int? durationMs;
 
   const SendMessage({
     required this.plaintext,
     required this.type,
     required this.senderUid,
     this.mediaUrl,
+    this.durationMs,
   });
 
   @override
-  List<Object?> get props => [plaintext, type, senderUid, mediaUrl];
+  List<Object?> get props => [plaintext, type, senderUid, mediaUrl, durationMs];
 }
 
 class DeleteMessageForMeEvent extends ChatEvent {

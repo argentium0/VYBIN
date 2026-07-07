@@ -21,10 +21,12 @@ class Message {
   final int? mediaSize;
   final String? mediaMimeType;
   final String? mediaOriginalFilename;
+  final int? durationMs; // Voice recording duration in milliseconds
 
   final List<String> deletedFor;
   final bool deletedForEveryone;
   final DateTime? deletedForEveryoneAt;
+  final bool isDeleted;
 
   const Message({
     required this.messageId,
@@ -44,9 +46,11 @@ class Message {
     this.mediaSize,
     this.mediaMimeType,
     this.mediaOriginalFilename,
+    this.durationMs,
     this.deletedFor = const [],
     this.deletedForEveryone = false,
     this.deletedForEveryoneAt,
+    this.isDeleted = false,
   });
 
   Message copyWith({
@@ -67,9 +71,11 @@ class Message {
     int? mediaSize,
     String? mediaMimeType,
     String? mediaOriginalFilename,
+    int? durationMs,
     List<String>? deletedFor,
     bool? deletedForEveryone,
     DateTime? deletedForEveryoneAt,
+    bool? isDeleted,
   }) {
     return Message(
       messageId: messageId ?? this.messageId,
@@ -89,9 +95,11 @@ class Message {
       mediaSize: mediaSize ?? this.mediaSize,
       mediaMimeType: mediaMimeType ?? this.mediaMimeType,
       mediaOriginalFilename: mediaOriginalFilename ?? this.mediaOriginalFilename,
+      durationMs: durationMs ?? this.durationMs,
       deletedFor: deletedFor ?? this.deletedFor,
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
       deletedForEveryoneAt: deletedForEveryoneAt ?? this.deletedForEveryoneAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
@@ -118,11 +126,13 @@ class Message {
       mediaSize: map['mediaSize'] as int?,
       mediaMimeType: map['mediaMimeType'] as String?,
       mediaOriginalFilename: map['mediaOriginalFilename'] as String?,
+      durationMs: map['durationMs'] as int?,
       deletedFor: List<String>.from(map['deletedFor'] ?? []),
       deletedForEveryone: map['deletedForEveryone'] as bool? ?? false,
       deletedForEveryoneAt: map['deletedForEveryoneAt'] != null 
           ? _parseDateTime(map['deletedForEveryoneAt']) 
           : null,
+      isDeleted: map['isDeleted'] as bool? ?? false,
     );
   }
 
@@ -143,9 +153,11 @@ class Message {
       'mediaSize': mediaSize,
       'mediaMimeType': mediaMimeType,
       'mediaOriginalFilename': mediaOriginalFilename,
+      'durationMs': durationMs,
       'deletedFor': deletedFor,
       'deletedForEveryone': deletedForEveryone,
       'deletedForEveryoneAt': deletedForEveryoneAt?.toIso8601String(),
+      'isDeleted': isDeleted,
     };
   }
 

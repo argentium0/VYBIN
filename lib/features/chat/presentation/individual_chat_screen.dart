@@ -182,6 +182,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           type: 'voice',
           senderUid: _currentUserId,
           mediaUrl: file.path,
+          durationMs: finalDuration * 1000,
         ),
       );
     } catch (e) {
@@ -646,8 +647,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 }
 
   Widget _buildChatBubble(Message message, bool isMe) {
-    final isDeleted = message.deletedForEveryone || message.plaintext == '🚫 This message was deleted.';
-    if (isDeleted) {
+    if (message.isDeleted) {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
@@ -659,9 +659,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 : VybinTheme.getReceivedBubbleColor(context).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Text(
-            '🚫 This message was deleted.',
-            style: TextStyle(
+          child: Text(
+            isMe ? '🚫 You deleted this message.' : '🚫 This message was deleted.',
+            style: const TextStyle(
               color: Colors.white60,
               fontStyle: FontStyle.italic,
               fontSize: 14,
@@ -838,13 +838,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     Color color;
     if (status == 'read') {
       icon = Icons.done_all;
-      color = VybinTheme.neonBlue;
+      color = Colors.blue;
     } else if (status == 'delivered') {
       icon = Icons.done_all;
-      color = Colors.white60;
+      color = Colors.grey;
     } else {
-      icon = Icons.done;
-      color = Colors.white60;
+      icon = Icons.check;
+      color = Colors.grey;
     }
     return Icon(icon, size: 14, color: color);
   }
@@ -1342,6 +1342,7 @@ class VoiceMessageBubble extends StatefulWidget {
 class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   StreamSubscription? _positionSub;
   StreamSubscription? _stateSub;
+  StreamSubscription? _durationSub;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
@@ -1361,6 +1362,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   }
 
   void _parseTotalDuration() {
+    if (widget.message.durationMs != null && widget.message.durationMs! > 0) {
+      _totalDurationSeconds = widget.message.durationMs! ~/ 1000;
+      _duration = Duration(milliseconds: widget.message.durationMs!);
+      return;
+    }
+
     final plaintext = widget.message.plaintext ?? '';
     final start = plaintext.indexOf('(');
     final end = plaintext.indexOf(')');
@@ -1391,6 +1398,20 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         if (mounted) {
           setState(() {
             _position = pos;
+          });
+        }
+      }
+    });
+
+    _durationSub = player.durationStream.listen((dur) {
+      final currentUrl = widget.mediaService.currentPlayingUrl;
+      final isCurrent = widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      if (isCurrent && dur != null) {
+        if (mounted) {
+          setState(() {
+            _duration = dur;
+            _totalDurationSeconds = dur.inSeconds;
           });
         }
       }
@@ -1427,6 +1448,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   void dispose() {
     _positionSub?.cancel();
     _stateSub?.cancel();
+    _durationSub?.cancel();
     _simulationTimer?.cancel();
     super.dispose();
   }
@@ -1718,14 +1740,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                               : VybinTheme.secondaryText,
                         ),
                       ),
-                      if (isMe)
-                        Icon(
-                          Icons.done_all,
-                          color: theme.brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.black87,
-                          size: 16,
-                        ),
+                      if (isMe) ...[
+                        const SizedBox(width: 4),
+                        _buildStatusTicks(widget.message.status),
+                      ],
                     ],
                   ),
                 ],
@@ -1735,6 +1753,22 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
         ),
       ),
     );
+  }
+
+  Widget _buildStatusTicks(String status) {
+    IconData icon;
+    Color color;
+    if (status == 'read') {
+      icon = Icons.done_all;
+      color = Colors.blue;
+    } else if (status == 'delivered') {
+      icon = Icons.done_all;
+      color = Colors.grey;
+    } else {
+      icon = Icons.check;
+      color = Colors.grey;
+    }
+    return Icon(icon, size: 14, color: color);
   }
 }
 
@@ -1979,13 +2013,13 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
     Color color;
     if (status == 'read') {
       icon = Icons.done_all;
-      color = VybinTheme.neonBlue;
+      color = Colors.blue;
     } else if (status == 'delivered') {
       icon = Icons.done_all;
-      color = Colors.white60;
+      color = Colors.grey;
     } else {
-      icon = Icons.done;
-      color = Colors.white60;
+      icon = Icons.check;
+      color = Colors.grey;
     }
     return Icon(icon, size: 14, color: color);
   }
@@ -2261,13 +2295,13 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
     Color color;
     if (status == 'read') {
       icon = Icons.done_all;
-      color = VybinTheme.neonBlue;
+      color = Colors.blue;
     } else if (status == 'delivered') {
       icon = Icons.done_all;
-      color = Colors.white60;
+      color = Colors.grey;
     } else {
-      icon = Icons.done;
-      color = Colors.white60;
+      icon = Icons.check;
+      color = Colors.grey;
     }
     return Icon(icon, size: 14, color: color);
   }
@@ -2546,13 +2580,13 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
     Color color;
     if (status == 'read') {
       icon = Icons.done_all;
-      color = VybinTheme.neonBlue;
+      color = Colors.blue;
     } else if (status == 'delivered') {
       icon = Icons.done_all;
-      color = Colors.white60;
+      color = Colors.grey;
     } else {
-      icon = Icons.done;
-      color = Colors.white60;
+      icon = Icons.check;
+      color = Colors.grey;
     }
     return Icon(icon, size: 14, color: color);
   }
