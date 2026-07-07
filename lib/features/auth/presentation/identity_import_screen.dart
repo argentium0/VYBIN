@@ -104,7 +104,9 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Restore Chat History',
+                      state is AuthNeedsMigrationState
+                          ? 'New Device Detected'
+                          : 'Restore Chat History',
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: onSurface,
                         fontWeight: FontWeight.bold,
@@ -157,9 +159,11 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                     ),
                     const SizedBox(height: 24),
                     // Monospace text area instruction
-                    const Text(
-                      'Paste your exported Cryptographic Identity Blob here to restore your chat history.',
-                      style: TextStyle(
+                    Text(
+                      state is AuthNeedsMigrationState
+                          ? 'New Device Detected. Please paste your secure migration blob to unlock your account.'
+                          : 'Paste your exported Cryptographic Identity Blob here to restore your chat history.',
+                      style: const TextStyle(
                         color: VybinTheme.secondaryText,
                         fontSize: 14,
                         height: 1.4,

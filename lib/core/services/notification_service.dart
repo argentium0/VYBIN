@@ -95,7 +95,7 @@ class NotificationService {
       title: 'VYBIN',
       body: '🔒 New Encrypted Message',
       payload: jsonEncode({
-        if (conversationId != null) 'conversationId': conversationId,
+        'conversationId': ?conversationId,
         'senderUid': senderUid,
       }),
     );

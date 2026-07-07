@@ -276,17 +276,30 @@ class _ChatListScreenState extends State<ChatListScreen> {
             horizontal: 16,
             vertical: 8,
           ),
-          leading: CircleAvatar(
-            radius: 26,
-            backgroundColor: VybinTheme.whatsappTeal,
-            child: Text(
-              avatarInitials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+          leading: StreamBuilder<UserModel?>(
+            stream: context.read<ChatRepository>().getUserStream(otherUid, myUid),
+            builder: (context, snapshot) {
+              final user = snapshot.data;
+              final livePhotoUrl = user?.profilePhotoUrl;
+
+              return CircleAvatar(
+                radius: 26,
+                backgroundColor: VybinTheme.whatsappTeal,
+                backgroundImage: (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
+                    ? NetworkImage(livePhotoUrl)
+                    : null,
+                child: (livePhotoUrl == null || livePhotoUrl.isEmpty)
+                    ? Text(
+                        avatarInitials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      )
+                    : null,
+              );
+            },
           ),
           title: Text(
             displayName,
@@ -363,6 +376,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
+    if (authState is AuthNeedsMigrationState) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     UserModel? currentUser;
     if (authState is AuthAuthenticated) {
       currentUser = authState.user;

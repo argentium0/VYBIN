@@ -35,6 +35,7 @@ class MessageModel extends Equatable {
   final bool deletedForEveryone;
   final DateTime? deletedForEveryoneAt;
   final bool isDeleted;
+  final bool hasDecryptionError;
 
   const MessageModel({
     required this.messageId,
@@ -59,6 +60,7 @@ class MessageModel extends Equatable {
     required this.deletedForEveryone,
     this.deletedForEveryoneAt,
     this.isDeleted = false,
+    this.hasDecryptionError = false,
   });
 
   /// Factory constructor to create a [MessageModel] from a JSON map (e.g. Firestore document).
@@ -105,6 +107,7 @@ class MessageModel extends Equatable {
       deletedForEveryone: json['deletedForEveryone'] as bool? ?? false,
       deletedForEveryoneAt: _parseNullableDateTime(json['deletedForEveryoneAt']),
       isDeleted: json['isDeleted'] as bool? ?? false,
+      hasDecryptionError: json['hasDecryptionError'] as bool? ?? false,
     );
   }
 
@@ -132,6 +135,7 @@ class MessageModel extends Equatable {
       'deletedForEveryone': deletedForEveryone,
       'deletedForEveryoneAt': deletedForEveryoneAt?.toIso8601String(),
       'isDeleted': isDeleted,
+      'hasDecryptionError': hasDecryptionError,
     };
   }
 
@@ -159,6 +163,7 @@ class MessageModel extends Equatable {
     bool? deletedForEveryone,
     DateTime? Function()? deletedForEveryoneAt,
     bool? isDeleted,
+    bool? hasDecryptionError,
   }) {
     return MessageModel(
       messageId: messageId ?? this.messageId,
@@ -183,6 +188,7 @@ class MessageModel extends Equatable {
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
       deletedForEveryoneAt: deletedForEveryoneAt != null ? deletedForEveryoneAt() : this.deletedForEveryoneAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      hasDecryptionError: hasDecryptionError ?? this.hasDecryptionError,
     );
   }
 
@@ -210,6 +216,7 @@ class MessageModel extends Equatable {
         deletedForEveryone,
         deletedForEveryoneAt,
         isDeleted,
+        hasDecryptionError,
       ];
 
   /// Utility method to parse dynamic date fields from JSON/Firestore.

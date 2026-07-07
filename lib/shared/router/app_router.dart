@@ -53,7 +53,8 @@ class AppRouter {
             state is AuthAuthenticated ||
             state is AuthUnauthenticated ||
             state is AuthEmailUnverified ||
-            state is AuthRequiresIdentityImport),
+            state is AuthRequiresIdentityImport ||
+            state is AuthNeedsMigrationState),
       ),
       redirect: (context, state) {
         final authState = authBloc.state;
@@ -82,7 +83,7 @@ class AppRouter {
           return isVerifyEmail ? null : '/verify-email';
         }
 
-        if (authState is AuthRequiresIdentityImport) {
+        if (authState is AuthRequiresIdentityImport || authState is AuthNeedsMigrationState) {
           return state.matchedLocation == '/identity-import' ? null : '/identity-import';
         }
 
@@ -158,13 +159,12 @@ class AppRouter {
           },
         ),
         GoRoute(
-          path: '/chat/contact-profile',
+          path: '/chat/contact-profile/:userId',
           builder: (context, state) {
-            final extra = state.extra as Map<String, dynamic>;
-            final user = extra['user'] as UserModel;
-            final conversationId = extra['conversationId'] as String;
+            final userId = state.pathParameters['userId']!;
+            final conversationId = state.uri.queryParameters['conversationId'] ?? '';
             return ContactProfileScreen(
-              user: user,
+              userId: userId,
               conversationId: conversationId,
             );
           },

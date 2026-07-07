@@ -114,5 +114,28 @@ void main() {
         expect(restoredPubKey.exponent, equals(pubKey.exponent));
       },
     );
+
+    test('decryptPrivateKey handles base64 with spaces and newlines', () async {
+      final pair = await encryptionService.generateKeyPair();
+      final derivedKey = encryptionService.deriveKeyFromPassword(
+        'pass',
+        'uid_1',
+      );
+
+      final encrypted = encryptionService.encryptPrivateKey(
+        pair.privateKey,
+        derivedKey,
+      );
+
+      // Inject spaces and newlines
+      final modifiedEncrypted = ' \n${encrypted.split('').join(' \n')} \n';
+
+      final decryptedKey = encryptionService.decryptPrivateKey(
+        modifiedEncrypted,
+        derivedKey,
+      );
+
+      expect(decryptedKey.modulus, equals(pair.privateKey.modulus));
+    });
   });
 }

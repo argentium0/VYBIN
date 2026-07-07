@@ -250,7 +250,7 @@ class AccountSettingsScreen extends StatelessWidget {
                   }
 
                   // Dispatch logout to auth bloc to trigger UI state reset
-                  authBloc.add(LogoutRequested());
+                  authBloc.add(const LogoutRequested(eraseDeviceData: true));
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

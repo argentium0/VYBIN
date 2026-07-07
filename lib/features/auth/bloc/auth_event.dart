@@ -41,7 +41,13 @@ class SignUpRequested extends AuthEvent {
   List<Object?> get props => [displayName, username, email, password, localPhotoPath];
 }
 
-class LogoutRequested extends AuthEvent {}
+class LogoutRequested extends AuthEvent {
+  final bool eraseDeviceData;
+  const LogoutRequested({this.eraseDeviceData = false});
+
+  @override
+  List<Object?> get props => [eraseDeviceData];
+}
 
 class CheckEmailVerificationRequested extends AuthEvent {}
 

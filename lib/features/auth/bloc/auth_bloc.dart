@@ -27,6 +27,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
+        final hasKey = await _authRepository.encryptionService.hasValidLocalPrivateKey(user.publicKey);
+        if (!hasKey) {
+          emit(AuthUnauthenticated());
+          return;
+        }
         if (_authRepository.isEmailVerified()) {
           emit(AuthAuthenticated(user));
         } else {
@@ -50,13 +55,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
+      final hasKey = await _authRepository.encryptionService.hasValidLocalPrivateKey(user.publicKey);
+      if (!hasKey) {
+        emit(AuthNeedsMigrationState(user: user, password: event.password));
+        return;
+      }
       if (_authRepository.isEmailVerified()) {
         emit(AuthAuthenticated(user));
       } else {
         emit(AuthEmailUnverified(user));
       }
     } on IdentityKeyMissingException catch (e) {
-      emit(AuthRequiresIdentityImport(user: e.user, password: e.password));
+      emit(AuthNeedsMigrationState(user: e.user, password: e.password));
     } on NetworkException catch (e) {
       emit(AuthNetworkError(e.message));
     } catch (e) {
@@ -91,7 +101,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _authRepository.logout();
+      await _authRepository.logout(eraseDeviceData: event.eraseDeviceData);
       emit(AuthUnauthenticated());
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
@@ -207,19 +217,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final currentState = state;
-    if (currentState is AuthRequiresIdentityImport) {
+    if (currentState is AuthRequiresIdentityImport || currentState is AuthNeedsMigrationState) {
       emit(AuthLoading());
       try {
-        final user = await _authRepository.completeLoginWithPrivateKey(
-          user: currentState.user,
-          password: currentState.password,
+        final user = currentState is AuthRequiresIdentityImport 
+            ? currentState.user 
+            : (currentState as AuthNeedsMigrationState).user;
+        final password = currentState is AuthRequiresIdentityImport 
+            ? currentState.password 
+            : (currentState as AuthNeedsMigrationState).password;
+
+        final updatedUser = await _authRepository.completeLoginWithPrivateKey(
+          user: user,
+          password: password,
           encryptedPrivateKey: event.identityBlob.trim(),
         );
 
         if (_authRepository.isEmailVerified()) {
-          emit(AuthAuthenticated(user));
+          emit(AuthAuthenticated(updatedUser));
         } else {
-          emit(AuthEmailUnverified(user));
+          emit(AuthEmailUnverified(updatedUser));
         }
       } on NetworkException catch (e) {
         emit(AuthNetworkError(e.message));

@@ -397,9 +397,15 @@ class ChatRepository {
               ivBase64: msg.iv,
               encryptedSessionKeyBase64: msg.encryptedKeys[myUid] ?? '',
             );
-            msg = msg.copyWith(plaintext: () => plaintext);
+            msg = msg.copyWith(
+              plaintext: () => plaintext,
+              hasDecryptionError: plaintext == '[DECRYPTION_FAILED]',
+            );
           } catch (e) {
-            msg = msg.copyWith(plaintext: () => 'Error decrypting message');
+            msg = msg.copyWith(
+              plaintext: () => 'Error decrypting message',
+              hasDecryptionError: true,
+            );
           }
         }
 

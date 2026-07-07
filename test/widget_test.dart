@@ -6,8 +6,12 @@ import 'package:vybin/app.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/data/auth_repository.dart';
 import 'package:vybin/shared/models/user_model.dart';
+import 'package:vybin/core/services/encryption_service.dart';
 
 class MockAuthRepository implements AuthRepository {
+  @override
+  EncryptionService get encryptionService => EncryptionService();
+
   @override
   Future<UserModel?> getCurrentUser() async => null;
 
@@ -36,7 +40,7 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> logout() async {}
+  Future<void> logout({bool eraseDeviceData = false}) async {}
 
   @override
   bool isEmailVerified() => false;

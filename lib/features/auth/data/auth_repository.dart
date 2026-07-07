@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:vybin/core/services/media_service.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -27,6 +28,8 @@ class AuthRepository {
        _firestore = firestore ?? FirebaseFirestore.instance,
        _encryptionService = encryptionService ?? EncryptionService(),
        _secureKeyStorage = secureKeyStorage ?? SecureKeyStorage();
+
+  EncryptionService get encryptionService => _encryptionService;
 
   /// Gets the currently authenticated user's profile from Firestore (if logged in).
   Future<UserModel?> getCurrentUser() async {
@@ -76,6 +79,24 @@ class AuthRepository {
       final user = UserModel.fromJson(userDoc.data()!);
 
       // 3. Re-derive AES key and decrypt private key
+      final hasRawKey = await _encryptionService.hasValidLocalPrivateKey(user.publicKey);
+      if (hasRawKey) {
+        final rawJson = await _secureKeyStorage.readRawPrivateKey();
+        if (rawJson != null) {
+          final privKey = _encryptionService.deserializePrivateKey(rawJson);
+          final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+          _encryptionService.loadKeyPair(
+            AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
+          );
+          
+          await _firestore.collection('users').doc(fbUser.uid).update({
+            'onlineStatus': 'online',
+            'lastSeen': DateTime.now().toIso8601String(),
+          });
+          return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
+        }
+      }
+
       final derivedKey = _encryptionService.deriveKeyFromPassword(
         password,
         fbUser.uid,
@@ -85,20 +106,28 @@ class AuthRepository {
         throw IdentityKeyMissingException(user: user, password: password);
       }
 
-      final privKey = _encryptionService.decryptPrivateKey(
-        encryptedPrivKey,
-        derivedKey,
-      );
-      final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+      try {
+        final privKey = _encryptionService.decryptPrivateKey(
+          encryptedPrivKey,
+          derivedKey,
+        );
+        final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
 
-      // Load key pair into memory
-      _encryptionService.loadKeyPair(
-        AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
-      );
+        if (privKey.modulus != pubKey.modulus) {
+          throw IdentityKeyMissingException(user: user, password: password);
+        }
 
-      // Save raw private key locally for background processing & startup
-      final rawJson = _encryptionService.serializePrivateKey(privKey);
-      await _secureKeyStorage.writeRawPrivateKey(rawJson);
+        // Load key pair into memory
+        _encryptionService.loadKeyPair(
+          AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
+        );
+
+        // Save raw private key locally for background processing & startup
+        final rawJson = _encryptionService.serializePrivateKey(privKey);
+        await _secureKeyStorage.writeRawPrivateKey(rawJson);
+      } catch (_) {
+        throw IdentityKeyMissingException(user: user, password: password);
+      }
 
       // 4. Update online status in Firestore
       await _firestore.collection('users').doc(fbUser.uid).update({
@@ -158,7 +187,7 @@ class AuthRepository {
             );
             await createdFbUser.updatePhotoURL(downloadUrl);
           } catch (e) {
-            print('Error uploading profile picture during signup: $e');
+            debugPrint('Error uploading profile picture during signup: $e');
             rethrow;
           }
         }
@@ -281,7 +310,7 @@ class AuthRepository {
   }
 
   /// Logs out the user and clears in-memory keys
-  Future<void> logout() async {
+  Future<void> logout({bool eraseDeviceData = false}) async {
     final fbUser = _firebaseAuth.currentUser;
     if (fbUser != null) {
       try {
@@ -295,7 +324,10 @@ class AuthRepository {
     }
 
     _encryptionService.clearPrivateKey();
-    await _secureKeyStorage.deleteRawPrivateKey();
+    if (eraseDeviceData) {
+      await _secureKeyStorage.deleteRawPrivateKey();
+      await _secureKeyStorage.deleteEncryptedPrivateKey();
+    }
     await _firebaseAuth.signOut();
   }
 
@@ -385,7 +417,7 @@ class AuthRepository {
         await user.updateDisplayName(displayName);
       }
     } catch (e) {
-      print('Firebase Auth profile update error: $e');
+      debugPrint('Firebase Auth profile update error: $e');
     }
 
     final Map<String, dynamic> updates = {
@@ -430,6 +462,7 @@ class AuthRepository {
     // Clean up local keys
     _encryptionService.clearPrivateKey();
     await _secureKeyStorage.deleteRawPrivateKey();
+    await _secureKeyStorage.deleteEncryptedPrivateKey();
   }
 
   /// Re-authenticates, changes the Firebase password, and re-encrypts the local cryptographic vault.
@@ -510,29 +543,42 @@ class AuthRepository {
     required String password,
     required String encryptedPrivateKey,
   }) async {
-    // 1. Save the encrypted private key to secure storage
-    await _secureKeyStorage.writeEncryptedPrivateKey(encryptedPrivateKey);
+    // Sanitize the pasted blob to remove any formatting/newlines/whitespace
+    final sanitizedBlob = encryptedPrivateKey.replaceAll(RegExp(r'\s+'), '').trim();
 
-    // 2. Re-derive AES key and decrypt private key
-    final derivedKey = _encryptionService.deriveKeyFromPassword(
-      password,
-      user.uid,
-    );
+    try {
+      // 1. Save the encrypted private key to secure storage
+      await _secureKeyStorage.writeEncryptedPrivateKey(sanitizedBlob);
 
-    final privKey = _encryptionService.decryptPrivateKey(
-      encryptedPrivateKey,
-      derivedKey,
-    );
-    final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+      // 2. Re-derive AES key and decrypt private key
+      final derivedKey = _encryptionService.deriveKeyFromPassword(
+        password,
+        user.uid,
+      );
 
-    // Load key pair into memory
-    _encryptionService.loadKeyPair(
-      AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
-    );
+      final privKey = _encryptionService.decryptPrivateKey(
+        sanitizedBlob,
+        derivedKey,
+      );
+      final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
 
-    // Save raw private key locally for background processing & startup
-    final rawJson = _encryptionService.serializePrivateKey(privKey);
-    await _secureKeyStorage.writeRawPrivateKey(rawJson);
+      if (privKey.modulus != pubKey.modulus) {
+        throw const FormatException('Private key modulus mismatch');
+      }
+
+      // Load key pair into memory
+      _encryptionService.loadKeyPair(
+        AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
+      );
+
+      // Save raw private key locally for background processing & startup
+      final rawJson = _encryptionService.serializePrivateKey(privKey);
+      await _secureKeyStorage.writeRawPrivateKey(rawJson);
+    } catch (e) {
+      throw Exception(
+        'Invalid or corrupted migration blob. Please ensure you copied the entire text without missing characters.',
+      );
+    }
 
     // 3. Update online status in Firestore
     await _firestore.collection('users').doc(user.uid).update({
@@ -644,7 +690,7 @@ class AuthRepository {
       await batch.commit();
     } catch (e) {
       // Print/log and allow signup to complete even if welcome message injection fails
-      print('Error injecting welcome message: $e');
+      debugPrint('Error injecting welcome message: $e');
     }
   }
 }

@@ -156,6 +156,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       deletedForEveryone: model.deletedForEveryone,
       deletedForEveryoneAt: model.deletedForEveryoneAt,
       isDeleted: model.isDeleted,
+      hasDecryptionError: model.hasDecryptionError,
     );
   }
 

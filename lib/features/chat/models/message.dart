@@ -27,6 +27,7 @@ class Message {
   final bool deletedForEveryone;
   final DateTime? deletedForEveryoneAt;
   final bool isDeleted;
+  final bool hasDecryptionError;
 
   const Message({
     required this.messageId,
@@ -51,6 +52,7 @@ class Message {
     this.deletedForEveryone = false,
     this.deletedForEveryoneAt,
     this.isDeleted = false,
+    this.hasDecryptionError = false,
   });
 
   Message copyWith({
@@ -76,6 +78,7 @@ class Message {
     bool? deletedForEveryone,
     DateTime? deletedForEveryoneAt,
     bool? isDeleted,
+    bool? hasDecryptionError,
   }) {
     return Message(
       messageId: messageId ?? this.messageId,
@@ -100,6 +103,7 @@ class Message {
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
       deletedForEveryoneAt: deletedForEveryoneAt ?? this.deletedForEveryoneAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      hasDecryptionError: hasDecryptionError ?? this.hasDecryptionError,
     );
   }
 
@@ -133,6 +137,7 @@ class Message {
           ? _parseDateTime(map['deletedForEveryoneAt']) 
           : null,
       isDeleted: map['isDeleted'] as bool? ?? false,
+      hasDecryptionError: map['hasDecryptionError'] as bool? ?? false,
     );
   }
 
@@ -158,6 +163,7 @@ class Message {
       'deletedForEveryone': deletedForEveryone,
       'deletedForEveryoneAt': deletedForEveryoneAt?.toIso8601String(),
       'isDeleted': isDeleted,
+      'hasDecryptionError': hasDecryptionError,
     };
   }
 

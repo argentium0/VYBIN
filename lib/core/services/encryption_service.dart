@@ -4,6 +4,8 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:vybin/core/services/secure_key_storage.dart';
 
 class EncryptionService {
   RSAPrivateKey? _inMemoryPrivateKey;
@@ -109,7 +111,8 @@ class EncryptionService {
     String encryptedBase64,
     Uint8List derivedKey,
   ) {
-    final combined = base64Decode(encryptedBase64);
+    final sanitizedBase64 = encryptedBase64.replaceAll(RegExp(r'\s+'), '').trim();
+    final combined = base64Decode(sanitizedBase64);
 
     final nonce = combined.sublist(0, 12);
     final ciphertext = combined.sublist(12);
@@ -282,23 +285,27 @@ class EncryptionService {
     required String ivBase64,
     required String encryptedSessionKeyBase64,
   }) {
-    if (_inMemoryPrivateKey == null) {
-      throw Exception('Private key not loaded in memory.');
+    try {
+      if (_inMemoryPrivateKey == null) {
+        throw Exception('Private key not loaded in memory.');
+      }
+
+      final oaep = OAEPEncoding.withSHA256(RSAEngine())
+        ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
+
+      final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
+      final aesKey = oaep.process(encryptedSessionKey);
+
+      final iv = base64Decode(ivBase64);
+
+      final cipher = GCMBlockCipher(
+        AESEngine(),
+      )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
+
+      return cipher.process(encryptedBytes);
+    } catch (_) {
+      return Uint8List(0);
     }
-
-    final oaep = OAEPEncoding.withSHA256(RSAEngine())
-      ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
-
-    final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
-    final aesKey = oaep.process(encryptedSessionKey);
-
-    final iv = base64Decode(ivBase64);
-
-    final cipher = GCMBlockCipher(
-      AESEngine(),
-    )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
-
-    return cipher.process(encryptedBytes);
   }
 
   /// Encrypts plaintext string using a pre-existing AES session key.
@@ -328,27 +335,31 @@ class EncryptionService {
     required String ivBase64,
     required String encryptedSessionKeyBase64,
   }) {
-    if (_inMemoryPrivateKey == null) {
-      throw Exception('Private key not loaded in memory.');
+    try {
+      if (_inMemoryPrivateKey == null) {
+        throw Exception('Private key not loaded in memory.');
+      }
+
+      // Decrypt the session key
+      final oaep = OAEPEncoding.withSHA256(RSAEngine())
+        ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
+
+      final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
+      final aesKey = oaep.process(encryptedSessionKey);
+
+      // Decrypt the message
+      final iv = base64Decode(ivBase64);
+      final ciphertextBytes = base64Decode(ciphertextBase64);
+
+      final cipher = GCMBlockCipher(
+        AESEngine(),
+      )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
+
+      final plaintextBytes = cipher.process(ciphertextBytes);
+      return utf8.decode(plaintextBytes);
+    } catch (_) {
+      return '[DECRYPTION_FAILED]';
     }
-
-    // Decrypt the session key
-    final oaep = OAEPEncoding.withSHA256(RSAEngine())
-      ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
-
-    final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
-    final aesKey = oaep.process(encryptedSessionKey);
-
-    // Decrypt the message
-    final iv = base64Decode(ivBase64);
-    final ciphertextBytes = base64Decode(ciphertextBase64);
-
-    final cipher = GCMBlockCipher(
-      AESEngine(),
-    )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
-
-    final plaintextBytes = cipher.process(ciphertextBytes);
-    return utf8.decode(plaintextBytes);
   }
 
   Uint8List _encodeBigInt(BigInt number) {
@@ -423,6 +434,22 @@ class EncryptionService {
       hex += b.toRadixString(16).padLeft(2, '0');
     }
     return BigInt.parse(hex, radix: 16);
+  }
+
+  Future<bool> hasValidLocalPrivateKey(String expectedPublicKey) async {
+    try {
+      const secureStorage = FlutterSecureStorage();
+      final secureKeyStorage = SecureKeyStorage(storage: secureStorage);
+      final rawJson = await secureKeyStorage.readRawPrivateKey();
+      if (rawJson == null) return false;
+
+      final privKey = deserializePrivateKey(rawJson);
+      final pubKey = decodePublicKeyFromPem(expectedPublicKey);
+
+      return privKey.modulus == pubKey.modulus;
+    } catch (_) {
+      return false;
+    }
   }
 
   static SecureRandom _getSecureRandom() {

@@ -487,11 +487,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                 onTap: () {
                   if (user != null) {
                     context.push(
-                      '/chat/contact-profile',
-                      extra: {
-                        'user': user,
-                        'conversationId': widget.conversationId,
-                      },
+                      '/chat/contact-profile/${user.uid}?conversationId=${widget.conversationId}',
                     );
                   }
                 },
@@ -499,10 +495,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   children: [
                     CircleAvatar(
                       backgroundColor: VybinTheme.whatsappTeal,
-                      child: Text(
-                        initials,
-                        style: const TextStyle(color: Colors.white),
-                      ),
+                      backgroundImage: (user?.profilePhotoUrl != null && user!.profilePhotoUrl!.isNotEmpty)
+                          ? NetworkImage(user.profilePhotoUrl!)
+                          : null,
+                      child: (user?.profilePhotoUrl == null || user!.profilePhotoUrl!.isEmpty)
+                          ? Text(
+                              initials,
+                              style: const TextStyle(color: Colors.white),
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -647,6 +648,30 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 }
 
   Widget _buildChatBubble(Message message, bool isMe) {
+    if (message.hasDecryptionError) {
+      return Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isMe
+                ? VybinTheme.getSentBubbleColor(context).withValues(alpha: 0.5)
+                : VybinTheme.getReceivedBubbleColor(context).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            '🔒 Waiting for key migration...',
+            style: TextStyle(
+              color: Colors.white60,
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
     if (message.isDeleted) {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

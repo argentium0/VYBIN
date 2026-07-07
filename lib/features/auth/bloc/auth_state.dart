@@ -81,3 +81,17 @@ class AuthRequiresIdentityImport extends AuthState {
 class AuthPasswordChangeSuccess extends AuthState {
   const AuthPasswordChangeSuccess();
 }
+
+/// State representing a logged in user who needs to import their E2EE key because of key mismatch/new device.
+class AuthNeedsMigrationState extends AuthState {
+  final UserModel user;
+  final String password;
+
+  const AuthNeedsMigrationState({
+    required this.user,
+    required this.password,
+  });
+
+  @override
+  List<Object?> get props => [user, password];
+}

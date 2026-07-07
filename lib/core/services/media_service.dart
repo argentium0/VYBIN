@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:flutter/foundation.dart';
 
 class MediaService {
   final ImagePicker _imagePicker;
@@ -173,11 +173,11 @@ class MediaService {
         final jsonResponse = jsonDecode(responseData);
         return jsonResponse['secure_url'] as String?;
       } else {
-        print('Cloudinary upload failed: \${response.statusCode}');
+        debugPrint('Cloudinary upload failed: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('Exception during Cloudinary upload: \$e');
+      debugPrint('Exception during Cloudinary upload: $e');
       return null;
     }
   }
