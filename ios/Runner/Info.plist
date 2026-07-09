@@ -72,5 +72,10 @@
 	<string>VYBIN requires microphone access to record and send voice notes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>VYBIN requires gallery access to select and send media.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
 </dict>
 </plist>

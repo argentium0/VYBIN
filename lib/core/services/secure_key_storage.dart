@@ -39,4 +39,21 @@ class SecureKeyStorage {
   Future<void> deleteRawPrivateKey() async {
     await _storage.delete(key: _rawPrivateKeyKey);
   }
+
+  static const String _localSessionIdKey = 'local_session_id';
+
+  /// Persists the local session ID to secure storage.
+  Future<void> writeLocalSessionId(String sessionId) async {
+    await _storage.write(key: _localSessionIdKey, value: sessionId);
+  }
+
+  /// Retrieves the local session ID from secure storage.
+  Future<String?> readLocalSessionId() async {
+    return await _storage.read(key: _localSessionIdKey);
+  }
+
+  /// Deletes the local session ID from secure storage.
+  Future<void> deleteLocalSessionId() async {
+    await _storage.delete(key: _localSessionIdKey);
+  }
 }

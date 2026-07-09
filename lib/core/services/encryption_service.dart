@@ -35,8 +35,8 @@ class EncryptionService {
 
       final pair = keyGen.generateKeyPair();
       return AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(
-        pair.publicKey,
-        pair.privateKey,
+        pair.publicKey as RSAPublicKey,
+        pair.privateKey as RSAPrivateKey,
       );
     });
   }

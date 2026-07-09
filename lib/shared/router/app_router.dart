@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vybin/main.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
 import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/features/auth/presentation/splash_screen.dart';
@@ -22,7 +23,6 @@ import 'package:vybin/features/settings/presentation/account_settings_screen.dar
 import 'package:vybin/features/settings/presentation/notification_settings_screen.dart';
 import 'package:vybin/features/chat/presentation/key_verification_screen.dart';
 import 'package:vybin/features/chat/presentation/contact_profile_screen.dart';
-import 'package:vybin/shared/models/user_model.dart';
 
 /// Helper to convert BLoC stream updates into a [Listenable] for [GoRouter].
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -47,6 +47,7 @@ class AppRouter {
 
   static GoRouter createRouter(AuthBloc authBloc) {
     return GoRouter(
+      navigatorKey: navigatorKey,
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(
         authBloc.stream.where((state) =>
@@ -54,7 +55,8 @@ class AppRouter {
             state is AuthUnauthenticated ||
             state is AuthEmailUnverified ||
             state is AuthRequiresIdentityImport ||
-            state is AuthNeedsMigrationState),
+            state is AuthNeedsMigrationState ||
+            state is AuthLoggedOutState),
       ),
       redirect: (context, state) {
         final authState = authBloc.state;
@@ -70,8 +72,8 @@ class AppRouter {
           return isSplash ? null : '/';
         }
 
-        if (authState is AuthUnauthenticated) {
-          // If not logged in, redirect to login unless already on auth screens
+        if (authState is AuthUnauthenticated || authState is AuthLoggedOutState) {
+          // If not logged in or forced logged out, redirect to login unless already on auth screens
           return isLoggingIn ? null : '/login';
         }
 

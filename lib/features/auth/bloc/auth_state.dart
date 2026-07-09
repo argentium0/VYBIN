@@ -95,3 +95,13 @@ class AuthNeedsMigrationState extends AuthState {
   @override
   List<Object?> get props => [user, password];
 }
+
+/// State representing a user forced out because their session has been migrated to another device.
+class AuthLoggedOutState extends AuthState {
+  final String message;
+
+  const AuthLoggedOutState(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

@@ -91,3 +91,5 @@ class ChangePasswordRequested extends AuthEvent {
   @override
   List<Object?> get props => [currentPassword, newPassword];
 }
+
+class SessionMismatchDetected extends AuthEvent {}

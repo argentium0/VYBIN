@@ -24,7 +24,7 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      initSettings,
+      settings: initSettings,
     );
   }
 
@@ -50,7 +50,13 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _localNotifications.show(id, title, body, details, payload: payload);
+    await _localNotifications.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+      payload: payload,
+    );
   }
 
   static Future<void> decryptAndShowLocalNotification(RemoteMessage message) async {
@@ -95,7 +101,7 @@ class NotificationService {
       title: 'VYBIN',
       body: '🔒 New Encrypted Message',
       payload: jsonEncode({
-        'conversationId': ?conversationId,
+        'conversationId': conversationId,
         'senderUid': senderUid,
       }),
     );

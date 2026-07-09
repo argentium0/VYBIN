@@ -13,6 +13,8 @@ import 'package:vybin/core/services/encryption_service.dart';
 import 'package:vybin/core/services/notification_service.dart';
 import 'package:vybin/firebase_options.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

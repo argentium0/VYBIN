@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:vybin/core/services/media_service.dart';
@@ -12,6 +13,7 @@ import 'package:vybin/core/services/secure_key_storage.dart';
 import 'package:vybin/shared/models/user_model.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/message_model.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthRepository {
   final fb.FirebaseAuth _firebaseAuth;
@@ -215,6 +217,10 @@ class AuthRepository {
           keyPair.publicKey,
         );
 
+        // Generate and save newSessionId locally
+        final newSessionId = const Uuid().v4();
+        await _secureKeyStorage.writeLocalSessionId(newSessionId);
+
         // 5. Write to Firestore in a transaction to ensure atomic username check and registration
         final user = UserModel(
           uid: createdFbUser.uid,
@@ -229,6 +235,7 @@ class AuthRepository {
           createdAt: DateTime.now(),
           blockedUids: const [],
           profilePhotoUrl: downloadUrl,
+          currentSessionId: newSessionId,
         );
 
         await _firestore.runTransaction((transaction) async {
@@ -327,6 +334,7 @@ class AuthRepository {
     if (eraseDeviceData) {
       await _secureKeyStorage.deleteRawPrivateKey();
       await _secureKeyStorage.deleteEncryptedPrivateKey();
+      await _secureKeyStorage.deleteLocalSessionId();
     }
     await _firebaseAuth.signOut();
   }
@@ -463,6 +471,7 @@ class AuthRepository {
     _encryptionService.clearPrivateKey();
     await _secureKeyStorage.deleteRawPrivateKey();
     await _secureKeyStorage.deleteEncryptedPrivateKey();
+    await _secureKeyStorage.deleteLocalSessionId();
   }
 
   /// Re-authenticates, changes the Firebase password, and re-encrypts the local cryptographic vault.
@@ -545,6 +554,7 @@ class AuthRepository {
   }) async {
     // Sanitize the pasted blob to remove any formatting/newlines/whitespace
     final sanitizedBlob = encryptedPrivateKey.replaceAll(RegExp(r'\s+'), '').trim();
+    final newSessionId = const Uuid().v4();
 
     try {
       // 1. Save the encrypted private key to secure storage
@@ -574,19 +584,43 @@ class AuthRepository {
       // Save raw private key locally for background processing & startup
       final rawJson = _encryptionService.serializePrivateKey(privKey);
       await _secureKeyStorage.writeRawPrivateKey(rawJson);
+
+      // Save the generated session ID locally to secure storage
+      await _secureKeyStorage.writeLocalSessionId(newSessionId);
     } catch (e) {
       throw Exception(
         'Invalid or corrupted migration blob. Please ensure you copied the entire text without missing characters.',
       );
     }
 
-    // 3. Update online status in Firestore
+    // 3. Update online status and session ID in Firestore
     await _firestore.collection('users').doc(user.uid).update({
       'onlineStatus': 'online',
       'lastSeen': DateTime.now().toIso8601String(),
+      'currentSessionId': newSessionId,
     });
 
-    return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
+    return user.copyWith(
+      onlineStatus: 'online',
+      lastSeen: DateTime.now(),
+      currentSessionId: () => newSessionId,
+    );
+  }
+
+  /// Listens to real-time session updates from Firestore user document.
+  /// If cloud session ID does not match local session ID, triggers logout and calls callback.
+  StreamSubscription listenToSessionChanges(String userId, VoidCallback onSessionMismatch) {
+    return _firestore.collection('users').doc(userId).snapshots().listen((snapshot) async {
+      if (!snapshot.exists) return;
+      final data = snapshot.data();
+      if (data == null) return;
+      final cloudSessionId = data['currentSessionId'] as String?;
+      final localSessionId = await _secureKeyStorage.readLocalSessionId();
+      if (cloudSessionId != null && cloudSessionId != localSessionId) {
+        await logout(eraseDeviceData: true);
+        onSessionMismatch();
+      }
+    });
   }
 
   Future<void> _injectWelcomeMessage(UserModel user) async {

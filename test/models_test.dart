@@ -20,6 +20,7 @@ void main() {
       'about': 'Hey there! I am using VYBIN',
       'createdAt': now.toIso8601String(),
       'blockedUids': ['user_spammer'],
+      'currentSessionId': 'session123',
     };
 
     test('should parse correctly from json', () {
@@ -37,6 +38,7 @@ void main() {
       expect(model.about, 'Hey there! I am using VYBIN');
       expect(model.createdAt, now);
       expect(model.blockedUids, contains('user_spammer'));
+      expect(model.currentSessionId, 'session123');
     });
 
     test('should serialize correctly to json', () {
@@ -55,14 +57,20 @@ void main() {
       expect(serialized['about'], 'Hey there! I am using VYBIN');
       expect(serialized['createdAt'], now.toIso8601String());
       expect(serialized['blockedUids'], contains('user_spammer'));
+      expect(serialized['currentSessionId'], 'session123');
     });
 
     test('should support copyWith', () {
       final model = UserModel.fromJson(userJson);
-      final copied = model.copyWith(displayName: 'Alice Updated', fcmToken: () => null);
+      final copied = model.copyWith(
+        displayName: 'Alice Updated',
+        fcmToken: () => null,
+        currentSessionId: () => 'newSessionId',
+      );
 
       expect(copied.displayName, 'Alice Updated');
       expect(copied.fcmToken, isNull);
+      expect(copied.currentSessionId, 'newSessionId');
       expect(copied.uid, model.uid); // Unchanged fields
     });
 

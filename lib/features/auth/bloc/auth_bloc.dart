@@ -20,6 +20,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccountRequested);
     on<IdentityImportSubmitted>(_onIdentityImportSubmitted);
     on<ChangePasswordRequested>(_onChangePasswordRequested);
+    on<SessionMismatchDetected>(_onSessionMismatchDetected);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -33,6 +34,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
         if (_authRepository.isEmailVerified()) {
+          _startSessionListener(user.uid);
           emit(AuthAuthenticated(user));
         } else {
           emit(AuthEmailUnverified(user));
@@ -61,6 +63,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
       if (_authRepository.isEmailVerified()) {
+        _startSessionListener(user.uid);
         emit(AuthAuthenticated(user));
       } else {
         emit(AuthEmailUnverified(user));
@@ -100,6 +103,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    _cancelSessionListener();
     try {
       await _authRepository.logout(eraseDeviceData: event.eraseDeviceData);
       emit(AuthUnauthenticated());
@@ -119,6 +123,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (_authRepository.isEmailVerified()) {
           final user = await _authRepository.getCurrentUser();
           if (user != null) {
+            _startSessionListener(user.uid);
             emit(AuthAuthenticated(user));
           } else {
             emit(AuthEmailUnverified(
@@ -202,6 +207,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    _cancelSessionListener();
     try {
       await _authRepository.deleteAccount();
       emit(AuthUnauthenticated());
@@ -234,6 +240,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
 
         if (_authRepository.isEmailVerified()) {
+          _startSessionListener(updatedUser.uid);
           emit(AuthAuthenticated(updatedUser));
         } else {
           emit(AuthEmailUnverified(updatedUser));
@@ -271,5 +278,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(currentState.user));
       }
     }
+  }
+
+  StreamSubscription? _sessionSubscription;
+
+  void _startSessionListener(String userId) {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = _authRepository.listenToSessionChanges(
+      userId,
+      () {
+        add(SessionMismatchDetected());
+      },
+    );
+  }
+
+  void _cancelSessionListener() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = null;
+  }
+
+  Future<void> _onSessionMismatchDetected(
+    SessionMismatchDetected event,
+    Emitter<AuthState> emit,
+  ) async {
+    _cancelSessionListener();
+    emit(const AuthLoggedOutState(
+      "You have been logged out because your account was accessed from a new device.",
+    ));
+  }
+
+  @override
+  Future<void> close() {
+    _cancelSessionListener();
+    return super.close();
   }
 }

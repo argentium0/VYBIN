@@ -15,6 +15,7 @@ class UserModel extends Equatable {
   final String about;
   final DateTime createdAt;
   final List<String> blockedUids;
+  final String? currentSessionId;
 
   const UserModel({
     required this.uid,
@@ -29,6 +30,7 @@ class UserModel extends Equatable {
     required this.about,
     required this.createdAt,
     required this.blockedUids,
+    this.currentSessionId,
   });
 
   /// Factory constructor to create a [UserModel] from a JSON map (e.g. Firestore document).
@@ -49,6 +51,7 @@ class UserModel extends Equatable {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      currentSessionId: json['currentSessionId'] as String?,
     );
   }
 
@@ -67,6 +70,7 @@ class UserModel extends Equatable {
       'about': about,
       'createdAt': createdAt.toIso8601String(),
       'blockedUids': blockedUids,
+      'currentSessionId': currentSessionId,
     };
   }
 
@@ -84,6 +88,7 @@ class UserModel extends Equatable {
     String? about,
     DateTime? createdAt,
     List<String>? blockedUids,
+    String? Function()? currentSessionId,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -98,6 +103,7 @@ class UserModel extends Equatable {
       about: about ?? this.about,
       createdAt: createdAt ?? this.createdAt,
       blockedUids: blockedUids ?? this.blockedUids,
+      currentSessionId: currentSessionId != null ? currentSessionId() : this.currentSessionId,
     );
   }
 
@@ -115,6 +121,7 @@ class UserModel extends Equatable {
         about,
         createdAt,
         blockedUids,
+        currentSessionId,
       ];
 
   /// Utility method to parse dynamic date fields from JSON/Firestore

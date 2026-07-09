@@ -9,6 +9,8 @@ import 'package:vybin/core/services/media_service.dart';
 import 'package:vybin/shared/models/conversation_model.dart';
 import 'package:vybin/shared/models/message_model.dart';
 import 'package:vybin/shared/models/user_model.dart';
+import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
+import 'package:vybin/core/services/zego_signaling_extension.dart';
 
 class ChatRepository {
   final FirebaseFirestore _firestore;
@@ -172,6 +174,16 @@ class ChatRepository {
     });
 
     await batch.commit();
+
+    try {
+      await ZegoUIKitSignalingPlugin().sendCustomCommand(
+        inviterID: senderUid,
+        inviteeIDs: [recipientUid],
+        customCommand: '{"type": "new_text"}',
+      );
+    } catch (_) {
+      // Log failure but do not crash the message send flow
+    }
   }
 
   /// Sends a media message (image/voice/document) to a conversation after encrypting it.

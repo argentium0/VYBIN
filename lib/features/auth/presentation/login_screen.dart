@@ -102,6 +102,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             );
+          } else if (state is AuthLoggedOutState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.message)),
+                  ],
+                ),
+                backgroundColor: VybinTheme.whatsappTeal,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
           } else if (state is AuthAuthenticated) {
             // Contextual AlertDialog popup on simulated success
             showDialog(

@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
+import 'package:zego_uikit/zego_uikit.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:image_picker/image_picker.dart';
@@ -338,9 +340,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         return;
       }
 
-      final result = await FilePicker.platform.pickFiles(type: FileType.any);
-      if (result == null || result.files.single.path == null) return;
-      final filePath = result.files.single.path!;
+      final result = await FilePicker.pickFile(type: FileType.any);
+      if (result == null || result.path == null) return;
+      final filePath = result.path!;
 
       _chatBloc.add(
         SendMessage(
@@ -553,6 +555,30 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             },
           ),
           actions: [
+            StreamBuilder<UserModel?>(
+              stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
+              builder: (context, snapshot) {
+                final user = snapshot.data;
+                final userName = user?.username ?? otherUid;
+                return ZegoSendCallInvitationButton(
+                  isVideoCall: false,
+                  resourceID: 'vybin_call_resource',
+                  invitees: [
+                    ZegoUIKitUser(
+                      id: otherUid,
+                      name: userName,
+                    ),
+                  ],
+                  icon: ButtonIcon(
+                    icon: const Icon(
+                      Icons.phone_outlined,
+                      color: Colors.white,
+                    ),
+                  ),
+                  buttonSize: const Size(40, 40),
+                );
+              },
+            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (value) {

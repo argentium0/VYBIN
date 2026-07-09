@@ -9,17 +9,34 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vybin/features/auth/bloc/auth_bloc.dart';
+import 'package:vybin/features/auth/bloc/auth_state.dart';
 import 'package:vybin/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:vybin/shared/router/app_router.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
+import 'package:vybin/main.dart';
+import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
+import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
+import 'package:vybin/core/services/zego_signaling_extension.dart';
+import 'dart:async';
+import 'dart:convert';
+
+const int zegoAppID = 1912280269;
+const String zegoAppSign =
+    '681148e550ddad441123817ece4a591eb10a5924ea836cb83a45008fde16f501';
 
 class VybinApp extends StatefulWidget {
   final bool isFirstLaunch;
   const VybinApp({super.key, this.isFirstLaunch = false});
 
-  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
-  static final ValueNotifier<bool> onboardingCompleteNotifier = ValueNotifier(false);
-  static final ValueNotifier<bool> showActivityStatusNotifier = ValueNotifier(true);
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(
+    ThemeMode.dark,
+  );
+  static final ValueNotifier<bool> onboardingCompleteNotifier = ValueNotifier(
+    false,
+  );
+  static final ValueNotifier<bool> showActivityStatusNotifier = ValueNotifier(
+    true,
+  );
 
   @override
   State<VybinApp> createState() => _VybinAppState();
@@ -27,6 +44,7 @@ class VybinApp extends StatefulWidget {
 
 class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
   late final GoRouter _router;
+  StreamSubscription? _signalingSubscription;
 
   @override
   void initState() {
@@ -43,7 +61,9 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
       });
 
       // Check if the app was opened from a terminated state via a notification
-      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      FirebaseMessaging.instance.getInitialMessage().then((
+        RemoteMessage? message,
+      ) {
         if (message != null) {
           _handleNotificationRoute(message);
         }
@@ -78,6 +98,7 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _signalingSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -105,43 +126,123 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
   void _handleNotificationRoute(RemoteMessage message) {
     final conversationId = message.data['conversationId'] as String?;
     if (conversationId != null && conversationId.isNotEmpty) {
-      _router.push('/chat/$conversationId', extra: {
-        'contactName': message.data['contactName'] ?? 'Secure Chat',
-        'contactAvatarInitials': message.data['contactAvatarInitials'] ?? '🔒',
-      });
+      _router.push(
+        '/chat/$conversationId',
+        extra: {
+          'contactName': message.data['contactName'] ?? 'Secure Chat',
+          'contactAvatarInitials':
+              message.data['contactAvatarInitials'] ?? '🔒',
+        },
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: VybinApp.themeNotifier,
-      builder: (context, currentMode, _) {
-        return ValueListenableBuilder<bool>(
-          valueListenable: VybinApp.onboardingCompleteNotifier,
-          builder: (context, isComplete, _) {
-            if (!isComplete) {
-              return MaterialApp(
-                title: 'VYBIN',
-                theme: VybinTheme.lightTheme,
-                darkTheme: VybinTheme.darkTheme,
-                themeMode: currentMode,
-                home: const OnboardingScreen(),
-                debugShowCheckedModeBanner: false,
-              );
-            } else {
-              return MaterialApp.router(
-                title: 'VYBIN',
-                theme: VybinTheme.lightTheme,
-                darkTheme: VybinTheme.darkTheme,
-                themeMode: currentMode,
-                routerConfig: _router,
-                debugShowCheckedModeBanner: false,
-              );
-            }
-          },
-        );
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          ZegoUIKitPrebuiltCallInvitationService().init(
+            appID: zegoAppID,
+            appSign: zegoAppSign,
+            userID: state.user.uid,
+            userName: state.user.username,
+            plugins: [ZegoUIKitSignalingPlugin()],
+            requireConfig: (ZegoCallInvitationData data) {
+              final config = data.type == ZegoCallInvitationType.videoCall
+                  ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+                  : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall();
+
+              config
+                  .audioVideoView
+                  .foregroundBuilder = (context, size, user, extraInfo) {
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 10,
+                      left: 20,
+                      right: 20,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(0, 0, 0, 0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '🔒 Voice calls are secured in transit, but are NOT End-to-End Encrypted.',
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              };
+
+              return config;
+            },
+          ).then((_) {
+            ZegoUIKitSignalingPlugin().setupPeerToRoomCommandBridge();
+            _signalingSubscription?.cancel();
+            _signalingSubscription = ZegoUIKitSignalingPlugin()
+                .getInRoomCommandMessageReceivedEventStream()
+                .listen((event) async {
+              for (final msg in event.messages) {
+                try {
+                  final commandData = jsonDecode(utf8.decode(msg.message)) as Map<String, dynamic>;
+                  if (commandData['type'] == 'new_text') {
+                    await NotificationService.showNotification(
+                      id: DateTime.now().millisecondsSinceEpoch.hashCode,
+                      title: 'New Encrypted Message',
+                      body: 'New Encrypted Message',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Failed to parse command message: $e');
+                }
+              }
+            });
+          });
+        } else if (state is AuthUnauthenticated ||
+            state is AuthLoggedOutState) {
+          _signalingSubscription?.cancel();
+          _signalingSubscription = null;
+          ZegoUIKitPrebuiltCallInvitationService().uninit();
+        }
       },
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: VybinApp.themeNotifier,
+        builder: (context, currentMode, _) {
+          return ValueListenableBuilder<bool>(
+            valueListenable: VybinApp.onboardingCompleteNotifier,
+            builder: (context, isComplete, _) {
+              if (!isComplete) {
+                return MaterialApp(
+                  navigatorKey: navigatorKey,
+                  title: 'VYBIN',
+                  theme: VybinTheme.lightTheme,
+                  darkTheme: VybinTheme.darkTheme,
+                  themeMode: currentMode,
+                  home: const OnboardingScreen(),
+                  debugShowCheckedModeBanner: false,
+                );
+              } else {
+                return MaterialApp.router(
+                  title: 'VYBIN',
+                  theme: VybinTheme.lightTheme,
+                  darkTheme: VybinTheme.darkTheme,
+                  themeMode: currentMode,
+                  routerConfig: _router,
+                  debugShowCheckedModeBanner: false,
+                );
+              }
+            },
+          );
+        },
+      ),
     );
   }
 }

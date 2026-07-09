@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,6 +87,11 @@ class MockAuthRepository implements AuthRepository {
     required String encryptedPrivateKey,
   }) async {
     throw UnimplementedError();
+  }
+
+  @override
+  StreamSubscription listenToSessionChanges(String userId, void Function() onSessionMismatch) {
+    return const Stream<void>.empty().listen((_) {});
   }
 }
 

@@ -31,20 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
-
-  
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/logo.png"
-  min_sdk_android: 21 # ensure it matches your min sdk
-  
   # Phase 4 Dependencies
   flutter_local_notifications: any
   cached_network_image: ^3.4.1
   share_plus: any
-  
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -55,10 +45,10 @@ flutter_launcher_icons:
   uuid: ^4.5.3
   shared_preferences: ^2.2.0
   flutter_secure_storage: ^10.3.1
-  pointycastle: ^4.0.0
+  pointycastle: ^3.9.1
   image_picker: ^1.2.2
-  file_picker: ^8.0.0
-  open_file: ^3.3.0
+  file_picker: ^12.0.0-beta.7
+  open_file: ^4.0.0
   flutter_image_compress: ^2.4.0
   record: ^6.2.1
   just_audio: ^0.10.6
@@ -71,11 +61,26 @@ flutter_launcher_icons:
   http: any
   firebase_messaging: ^16.4.1
   crypto: ^3.0.3
+  zego_uikit_prebuilt_call: any
+  zego_uikit_signaling_plugin: any
+  zego_uikit: any
+  zego_plugin_adapter: any
+
+dependency_overrides:
+  win32: ^6.3.0
+  file_picker: ^12.0.0-beta.7
+  permission_handler: ^12.0.3
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logo.png"
+  min_sdk_android: 21 # ensure it matches your min sdk
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: "^0.13.1"
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
