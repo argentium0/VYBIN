@@ -38,6 +38,11 @@ VYBIN provides a fully functional, privacy-first messaging architecture featurin
 * **Local Notifications**: Direct-to-system notifications via `flutter_local_notifications` for both foreground and background states.
 * **Active Chat Silencing**: Automatically tracks active chats to suppress notifications for the chat currently being viewed.
 
+### Voice Calling & Custom Signaling
+* **1-on-1 Voice Calling**: Integrated voice calling capabilities directly from individual chat screens via Zego Cloud.
+* **Real-time Custom Signaling**: Utilizes Zego's signaling plugin to send instant peer-to-peer command messages (e.g., new message alerts) directly between devices.
+* **Security Notice**: Voice calls are secured in transit but are not End-to-End Encrypted (E2EE) at this time.
+
 ### UI/UX Design System
 * **Material 3 Design**: High-fidelity interface layouts styled similarly to WhatsApp.
 * **Premium Dark Mode**: Custom-tailored Material Design dark theme configurations.
@@ -52,6 +57,7 @@ VYBIN provides a fully functional, privacy-first messaging architecture featurin
 * **Cryptographic Primitives**: `pointycastle`, `flutter_secure_storage`, `crypto`
 * **Media & Hardware Support**: `record`, `just_audio`, `flutter_image_compress`, `image_picker`, `file_picker`, `open_file`, `permission_handler`, `path_provider`
 * **Real-time & Sync**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `firebase_messaging`
+* **Voice Calling & Signaling**: `zego_uikit_prebuilt_call`, `zego_uikit_signaling_plugin`
 * **Utilities & UI**: `cached_network_image`, `uuid`, `intl`, `share_plus`
 
 ---
