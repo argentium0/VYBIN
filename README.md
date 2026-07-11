@@ -40,6 +40,10 @@ VYBIN provides a fully functional, privacy-first messaging architecture featurin
 
 ### Voice Calling & Custom Signaling
 * **1-on-1 Voice Calling**: Integrated voice calling capabilities directly from individual chat screens via Zego Cloud.
+* **Prebuilt Integration Layout**: Centering constraints and size-optimized `ZegoSendCallInvitationButton` within the `AppBar` actions to prevent layout clashing.
+* **In-App Minimization & PiP**: Implements in-app Picture-in-Picture (PiP) layout aligned to the bottom-right.
+* **Intelligent Overlay Context**: Configures a custom `MaterialApp` builder to query the root `navigatorKey` context for Zego's overlay manager, allowing minimized calls to float as draggable bubbles inside the app.
+* **Dynamic Disclaimer Control**: Employs a size-conditional `foregroundBuilder` to hide the transit security notice in small PiP views (width < 300) to prevent duplication, while showing it on full-screen calls.
 * **Real-time Custom Signaling**: Utilizes Zego's signaling plugin to send instant peer-to-peer command messages (e.g., new message alerts) directly between devices.
 * **Security Notice**: Voice calls are secured in transit but are not End-to-End Encrypted (E2EE) at this time.
 
