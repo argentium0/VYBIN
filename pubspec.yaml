@@ -47,7 +47,7 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   pointycastle: ^3.9.1
   image_picker: ^1.2.2
-  file_picker: ^12.0.0-beta.7
+  file_picker: ^10.3.10
   open_file: ^4.0.0
   flutter_image_compress: ^2.4.0
   record: ^6.2.1
@@ -65,11 +65,7 @@ dependencies:
   zego_uikit_signaling_plugin: any
   zego_uikit: any
   zego_plugin_adapter: any
-
-dependency_overrides:
-  win32: ^6.3.0
-  file_picker: ^12.0.0-beta.7
-  permission_handler: ^12.0.3
+  emoji_picker_flutter: ^4.4.0
 
 flutter_launcher_icons:
   android: "launcher_icon"

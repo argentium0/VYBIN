@@ -23,6 +23,7 @@ import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
 import '../models/message.dart';
 import 'package:vybin/shared/utils/contact_display_helper.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 
 class IndividualChatScreen extends StatefulWidget {
   final String conversationId;
@@ -55,6 +56,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   int _recordingDuration = 0;
   Timer? _recordingTimer;
   bool _isTextEmpty = true;
+  bool showEmojiPicker = false;
+  final FocusNode textFocusNode = FocusNode();
 
   // Drag coordinates for cancel/lock
   double _dragDy = 0.0;
@@ -68,7 +71,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     super.initState();
     _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'my_uid_123';
     final uids = widget.conversationId.split('_');
-    otherUid = uids.firstWhere((uid) => uid != _currentUserId, orElse: () => '');
+    otherUid = uids.firstWhere(
+      (uid) => uid != _currentUserId,
+      orElse: () => '',
+    );
 
     ActiveChatTracker.activeConversationId = widget.conversationId;
     _chatBloc = ChatBloc(
@@ -76,6 +82,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       currentUid: _currentUserId,
     )..add(LoadMessages(widget.conversationId));
     _messageController.addListener(_onTextChanged);
+    textFocusNode.addListener(() {
+      if (textFocusNode.hasFocus) {
+        setState(() {
+          showEmojiPicker = false;
+        });
+      }
+    });
 
     _micAnimationController = AnimationController(
       vsync: this,
@@ -91,6 +104,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     ActiveChatTracker.activeConversationId = null;
     _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
+    textFocusNode.dispose();
     _micAnimationController.dispose();
     _recordingTimer?.cancel();
     _mediaService.dispose();
@@ -283,9 +297,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
@@ -321,9 +335,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking video: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking video: $e')));
       }
     }
   }
@@ -340,9 +354,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         return;
       }
 
-      final result = await FilePicker.pickFile(type: FileType.any);
-      if (result == null || result.path == null) return;
-      final filePath = result.path!;
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
+      if (result == null || result.files.single.path == null) return;
+      final filePath = result.files.single.path!;
 
       _chatBloc.add(
         SendMessage(
@@ -354,9 +368,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking document: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking document: $e')));
       }
     }
   }
@@ -444,6 +458,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final contactId = otherUid;
+    // ignore: avoid_print
+    print('Zego Button Built for: $contactId');
     return BlocProvider.value(
       value: _chatBloc,
       child: BlocListener<ChatBloc, ChatState>(
@@ -457,221 +474,319 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             );
           }
         },
-        child: Scaffold(
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: StreamBuilder<UserModel?>(
-            stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return const Text(
-                  'Unable to load contact',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                );
-              }
-              final user = snapshot.data;
-              final customName = localContactAliases[otherUid];
-              final username = user?.username ?? otherUid;
-              final displayName = getContactDisplayName(
-                customName: customName,
-                username: username,
-              );
-
-              final cleanName = displayName.startsWith('@') ? displayName.substring(1) : displayName;
-              final initials = cleanName.length >= 2
-                  ? cleanName.substring(0, 2).toUpperCase()
-                  : cleanName.toUpperCase();
-
-              final statusText = _formatPresence(user);
-              final isOnline = user?.onlineStatus == 'online';
-
-              return GestureDetector(
-                onTap: () {
-                  if (user != null) {
-                    context.push(
-                      '/chat/contact-profile/${user.uid}?conversationId=${widget.conversationId}',
+        child: PopScope(
+          canPop: !showEmojiPicker,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (showEmojiPicker) {
+              setState(() {
+                showEmojiPicker = false;
+              });
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              titleSpacing: 0,
+              title: StreamBuilder<UserModel?>(
+                stream: context.read<ChatRepository>().getUserStream(
+                  otherUid,
+                  _currentUserId,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Text(
+                      'Unable to load contact',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
                     );
                   }
-                },
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: VybinTheme.whatsappTeal,
-                      backgroundImage: (user?.profilePhotoUrl != null && user!.profilePhotoUrl!.isNotEmpty)
-                          ? NetworkImage(user.profilePhotoUrl!)
-                          : null,
-                      child: (user?.profilePhotoUrl == null || user!.profilePhotoUrl!.isEmpty)
-                          ? Text(
-                              initials,
-                              style: const TextStyle(color: Colors.white),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          displayName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: VybinApp.showActivityStatusNotifier,
-                          builder: (context, showStatus, _) {
-                            if (!showStatus || statusText.isEmpty) return const SizedBox.shrink();
+                  final user = snapshot.data;
+                  final customName = localContactAliases[otherUid];
+                  final username = user?.username ?? otherUid;
+                  final displayName = getContactDisplayName(
+                    customName: customName,
+                    username: username,
+                  );
 
-                            return Row(
-                              children: [
-                                if (isOnline) ...[
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: VybinTheme.neonHighlight,
-                                      shape: BoxShape.circle,
+                  final cleanName = displayName.startsWith('@')
+                      ? displayName.substring(1)
+                      : displayName;
+                  final initials = cleanName.length >= 2
+                      ? cleanName.substring(0, 2).toUpperCase()
+                      : cleanName.toUpperCase();
+
+                  final statusText = _formatPresence(user);
+                  final isOnline = user?.onlineStatus == 'online';
+
+                  return GestureDetector(
+                    onTap: () {
+                      if (user != null) {
+                        context.push(
+                          '/chat/contact-profile/${user.uid}?conversationId=${widget.conversationId}',
+                        );
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: VybinTheme.whatsappTeal,
+                          backgroundImage:
+                              (user?.profilePhotoUrl != null &&
+                                  user!.profilePhotoUrl!.isNotEmpty)
+                              ? NetworkImage(user.profilePhotoUrl!)
+                              : null,
+                          child:
+                              (user?.profilePhotoUrl == null ||
+                                  user!.profilePhotoUrl!.isEmpty)
+                              ? Text(
+                                  initials,
+                                  style: const TextStyle(color: Colors.white),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            ValueListenableBuilder<bool>(
+                              valueListenable:
+                                  VybinApp.showActivityStatusNotifier,
+                              builder: (context, showStatus, _) {
+                                if (!showStatus || statusText.isEmpty)
+                                  return const SizedBox.shrink();
+
+                                return Row(
+                                  children: [
+                                    if (isOnline) ...[
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: VybinTheme.neonHighlight,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Text(
+                                      statusText,
+                                      style: VybinTheme.caption.copyWith(
+                                        color: isOnline
+                                            ? VybinTheme.neonHighlight
+                                            : VybinTheme.secondaryText,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ],
-                                Text(
-                                  statusText,
-                                  style: VybinTheme.caption.copyWith(
-                                    color: isOnline 
-                                        ? VybinTheme.neonHighlight 
-                                        : VybinTheme.secondaryText,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-          actions: [
-            StreamBuilder<UserModel?>(
-              stream: context.read<ChatRepository>().getUserStream(otherUid, _currentUserId),
-              builder: (context, snapshot) {
-                final user = snapshot.data;
-                final userName = user?.username ?? otherUid;
-                return ZegoSendCallInvitationButton(
-                  isVideoCall: false,
-                  resourceID: 'vybin_call_resource',
-                  invitees: [
-                    ZegoUIKitUser(
-                      id: otherUid,
-                      name: userName,
-                    ),
-                  ],
-                  icon: ButtonIcon(
-                    icon: const Icon(
-                      Icons.phone_outlined,
-                      color: Colors.white,
-                    ),
-                  ),
-                  buttonSize: const Size(40, 40),
-                );
-              },
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              onSelected: (value) {
-                if (value == 'verify') {
-                  context.push(
-                    '/chat/${widget.conversationId}/verify',
-                    extra: {'contactName': widget.contactName},
                   );
-                } else if (value == 'block') {
-                  _showBlockUserBottomSheet(context);
-                } else if (value == 'report') {
-                  _showReportChatBottomSheet(context);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'verify',
-                  child: Row(
-                    children: [
-                      Icon(Icons.verified_user_outlined, color: VybinTheme.neonHighlight),
-                      SizedBox(width: 8),
-                      Text('Verify Keys', style: TextStyle(color: Colors.white)),
-                    ],
+                },
+              ),
+              actions: [
+                StreamBuilder<UserModel?>(
+                  stream: context.read<ChatRepository>().getUserStream(
+                    otherUid,
+                    _currentUserId,
                   ),
+                  builder: (context, snapshot) {
+                    final user = snapshot.data;
+                    final String contactId = otherUid;
+                    final String contactName =
+                        user?.username ?? widget.contactName;
+                    return Center(
+                      child: ZegoSendCallInvitationButton(
+                        isVideoCall: false,
+                        resourceID: 'vybin_call_resource',
+                        invitees: [
+                          ZegoUIKitUser(
+                            id: contactId,
+                            name: contactName,
+                          ),
+                        ],
+                        icon: ButtonIcon(
+                          icon: const Icon(
+                            Icons.phone,
+                            color: Colors.white,
+                          ),
+                        ),
+                        iconSize: const Size(24, 24),
+                        buttonSize: const Size(40, 40),
+                        onWillPressed: () async {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                "Attempting to call ID: $contactId",
+                              ),
+                            ),
+                          );
+                          // Return true to tell Zego to continue with the call
+                          return true;
+                        },
+                      ),
+                    );
+                  },
                 ),
-                const PopupMenuItem(
-                  value: 'block',
-                  child: Row(
-                    children: [
-                      Icon(Icons.block, color: VybinTheme.errorColor),
-                      SizedBox(width: 8),
-                      Text('Block User', style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem_outlined, color: Colors.orangeAccent),
-                      SizedBox(width: 8),
-                      Text('Report Chat', style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: (value) {
+                    if (value == 'verify') {
+                      context.push(
+                        '/chat/${widget.conversationId}/verify',
+                        extra: {'contactName': widget.contactName},
+                      );
+                    } else if (value == 'block') {
+                      _showBlockUserBottomSheet(context);
+                    } else if (value == 'report') {
+                      _showReportChatBottomSheet(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'verify',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.verified_user_outlined,
+                            color: VybinTheme.neonHighlight,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Verify Keys',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'block',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block, color: VybinTheme.errorColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Block User',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'report',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.report_problem_outlined,
+                            color: Colors.orangeAccent,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Report Chat',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: BlocBuilder<ChatBloc, ChatState>(
-                builder: (context, state) {
-                  if (state is ChatLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: VybinTheme.neonHighlight,
-                      ),
-                    );
-                  } else if (state is ChatLoaded) {
-                    final messages = state.messages;
-                    if (messages.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'Messages are end-to-end encrypted.\nNo one outside of this chat can read them 🔒',
-                          textAlign: TextAlign.center,
-                          style: VybinTheme.caption,
+            body: Column(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: BlocBuilder<ChatBloc, ChatState>(
+                          builder: (context, state) {
+                            if (state is ChatLoading) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: VybinTheme.neonHighlight,
+                                ),
+                              );
+                            } else if (state is ChatLoaded) {
+                              final messages = state.messages;
+                              if (messages.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    'Messages are end-to-end encrypted.\nNo one outside of this chat can read them 🔒',
+                                    textAlign: TextAlign.center,
+                                    style: VybinTheme.caption,
+                                  ),
+                                );
+                              }
+                              return ListView.builder(
+                                reverse: true,
+                                padding: const EdgeInsets.all(16),
+                                itemCount: messages.length,
+                                itemBuilder: (context, index) {
+                                  final message = messages[index];
+                                  final isMe =
+                                      message.senderUid == _currentUserId;
+                                  return _buildChatBubble(message, isMe);
+                                },
+                              );
+                            }
+                            return const SizedBox();
+                          },
                         ),
-                      );
-                    }
-                    return ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final message = messages[index];
-                        final isMe = message.senderUid == _currentUserId;
-                        return _buildChatBubble(message, isMe);
-                      },
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ),
+                      ),
+                      _buildInputZone(),
+                    ],
+                  ),
+                ),
+                if (showEmojiPicker)
+                  SizedBox(
+                    height: 250,
+                    child: EmojiPicker(
+                      textEditingController: _messageController,
+                      config: Config(
+                        height: 250,
+                        checkPlatformCompatibility: true,
+                        emojiViewConfig: EmojiViewConfig(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).scaffoldBackgroundColor,
+                        ),
+                        categoryViewConfig: CategoryViewConfig(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).scaffoldBackgroundColor,
+                          indicatorColor: Theme.of(context).colorScheme.primary,
+                          iconColor: Colors.grey,
+                          iconColorSelected: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            _buildInputZone(),
-          ],
+            // floatingActionButton: FloatingActionButton(
+            //   backgroundColor: Colors.red,
+            //   onPressed: () {
+            //     print("🚨 EMERGENCY BUTTON TAPPED!");
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(content: Text("BUTTON IS ALIVE!"))
+            //     );
+            //   },
+            //   child: Icon(Icons.touch_app),
+            // ),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildChatBubble(Message message, bool isMe) {
     if (message.hasDecryptionError) {
@@ -683,7 +798,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           decoration: BoxDecoration(
             color: isMe
                 ? VybinTheme.getSentBubbleColor(context).withValues(alpha: 0.5)
-                : VybinTheme.getReceivedBubbleColor(context).withValues(alpha: 0.5),
+                : VybinTheme.getReceivedBubbleColor(
+                    context,
+                  ).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Text(
@@ -707,11 +824,15 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
           decoration: BoxDecoration(
             color: isMe
                 ? VybinTheme.getSentBubbleColor(context).withValues(alpha: 0.5)
-                : VybinTheme.getReceivedBubbleColor(context).withValues(alpha: 0.5),
+                : VybinTheme.getReceivedBubbleColor(
+                    context,
+                  ).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            isMe ? '🚫 You deleted this message.' : '🚫 This message was deleted.',
+            isMe
+                ? '🚫 You deleted this message.'
+                : '🚫 This message was deleted.',
             style: const TextStyle(
               color: Colors.white60,
               fontStyle: FontStyle.italic,
@@ -841,8 +962,14 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: VybinTheme.errorColor),
-                title: const Text('Delete for Me', style: TextStyle(color: Colors.white)),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: VybinTheme.errorColor,
+                ),
+                title: const Text(
+                  'Delete for Me',
+                  style: TextStyle(color: Colors.white),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _chatBloc.add(
@@ -855,8 +982,14 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               ),
               if (isMe)
                 ListTile(
-                  leading: const Icon(Icons.delete_forever, color: VybinTheme.errorColor),
-                  title: const Text('Delete for Everyone', style: TextStyle(color: Colors.white)),
+                  leading: const Icon(
+                    Icons.delete_forever,
+                    color: VybinTheme.errorColor,
+                  ),
+                  title: const Text(
+                    'Delete for Everyone',
+                    style: TextStyle(color: Colors.white),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _chatBloc.add(
@@ -869,7 +1002,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: VybinTheme.secondaryText),
+                ),
               ),
             ],
           ),
@@ -943,14 +1079,24 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(
-                                Icons.emoji_emotions_outlined,
+                              icon: Icon(
+                                showEmojiPicker
+                                    ? Icons.keyboard_outlined
+                                    : Icons.emoji_emotions_outlined,
                                 color: VybinTheme.secondaryText,
                               ),
-                              onPressed: () {},
+                              onPressed: () {
+                                setState(() {
+                                  showEmojiPicker = !showEmojiPicker;
+                                });
+                                if (showEmojiPicker) {
+                                  textFocusNode.unfocus();
+                                }
+                              },
                             ),
                             Expanded(
                               child: TextField(
+                                focusNode: textFocusNode,
                                 controller: _messageController,
                                 style: VybinTheme.body1,
                                 textInputAction: TextInputAction.send,
@@ -1184,7 +1330,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                       await chatRepo.blockUser(_currentUserId, otherUid);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${widget.contactName} blocked.')),
+                          SnackBar(
+                            content: Text('${widget.contactName} blocked.'),
+                          ),
                         );
                         context.pop(); // Go back to chat list
                       }
@@ -1196,7 +1344,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                       }
                     }
                   },
-                  child: const Text('Block User', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Block User',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
@@ -1238,7 +1389,11 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.report_problem_outlined, color: Colors.orangeAccent, size: 48),
+              const Icon(
+                Icons.report_problem_outlined,
+                color: Colors.orangeAccent,
+                size: 48,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Report ${widget.contactName}?',
@@ -1295,7 +1450,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Chat report submitted successfully.')),
+                        const SnackBar(
+                          content: Text('Chat report submitted successfully.'),
+                        ),
                       );
                     }
                   } catch (e) {
@@ -1306,7 +1463,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                     }
                   }
                 },
-                child: const Text('Submit Report', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Submit Report',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 12),
               TextButton(
@@ -1443,8 +1603,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
     _positionSub = player.positionStream.listen((pos) {
       final currentUrl = widget.mediaService.currentPlayingUrl;
-      final isCurrent = widget.message.mediaUrl != null &&
-          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      final isCurrent =
+          widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl ||
+              (currentUrl != null && currentUrl.contains(mediaId)));
       if (isCurrent) {
         if (mounted) {
           setState(() {
@@ -1456,8 +1618,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
     _durationSub = player.durationStream.listen((dur) {
       final currentUrl = widget.mediaService.currentPlayingUrl;
-      final isCurrent = widget.message.mediaUrl != null &&
-          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      final isCurrent =
+          widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl ||
+              (currentUrl != null && currentUrl.contains(mediaId)));
       if (isCurrent && dur != null) {
         if (mounted) {
           setState(() {
@@ -1470,8 +1634,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
     _stateSub = player.playerStateStream.listen((state) {
       final currentUrl = widget.mediaService.currentPlayingUrl;
-      final isCurrent = widget.message.mediaUrl != null &&
-          (currentUrl == widget.message.mediaUrl || (currentUrl != null && currentUrl.contains(mediaId)));
+      final isCurrent =
+          widget.message.mediaUrl != null &&
+          (currentUrl == widget.message.mediaUrl ||
+              (currentUrl != null && currentUrl.contains(mediaId)));
       if (isCurrent) {
         if (mounted) {
           setState(() {
@@ -1518,8 +1684,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             });
           }
           final tempDir = await getTemporaryDirectory();
-          final decryptedFile = File('${tempDir.path}/decrypted_${widget.message.messageId}.m4a');
-          
+          final decryptedFile = File(
+            '${tempDir.path}/decrypted_${widget.message.messageId}.m4a',
+          );
+
           if (!await decryptedFile.exists()) {
             final client = HttpClient();
             final request = await client.getUrl(Uri.parse(mediaUrl));
@@ -1527,7 +1695,10 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             if (response.statusCode != 200) {
               throw Exception('Failed downloading voice note');
             }
-            final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+            final encryptedBytes = await response.fold<List<int>>(
+              [],
+              (a, b) => a..addAll(b),
+            );
 
             final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
             final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -1685,7 +1856,11 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                       alignment: Alignment.centerLeft,
                     ),
                     onPressed: _togglePlayback,
-                    icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+                    icon: const Icon(
+                      Icons.refresh,
+                      size: 14,
+                      color: VybinTheme.whatsappGreen,
+                    ),
                     label: const Text(
                       'Tap to Retry',
                       style: TextStyle(
@@ -1698,110 +1873,118 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                 ],
               )
             : Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _isLoading
-                ? const SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: CircularProgressIndicator(strokeWidth: 2, color: VybinTheme.whatsappGreen),
-                    ),
-                  )
-                : GestureDetector(
-                    onTap: _togglePlayback,
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: isMe
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : VybinTheme.whatsappTeal.withValues(alpha: 0.2),
-                      child: Icon(
-                        isPlayingThis
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: isMe ? Colors.white : VybinTheme.whatsappTeal,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(15, (index) {
-                      final heights = [
-                        6,
-                        12,
-                        18,
-                        14,
-                        8,
-                        16,
-                        22,
-                        18,
-                        12,
-                        20,
-                        14,
-                        8,
-                        12,
-                        10,
-                        6,
-                      ];
-                      final barHeight = heights[index % heights.length]
-                          .toDouble();
-
-                      final barProgress = index / 15;
-                      final isActive = isPlayingThis && barProgress <= progress;
-
-                      return Container(
-                        width: 3,
-                        height: barHeight,
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? (isMe
-                                    ? Colors.greenAccent
-                                    : VybinTheme.whatsappGreen)
-                              : (isMe
-                                    ? Colors.white.withValues(alpha: 0.4)
-                                    : VybinTheme.secondaryText.withValues(
-                                        alpha: 0.4,
-                                      )),
-                          borderRadius: BorderRadius.circular(1.5),
+                  _isLoading
+                      ? const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: VybinTheme.whatsappGreen,
+                            ),
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: _togglePlayback,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: isMe
+                                ? Colors.white.withValues(alpha: 0.2)
+                                : VybinTheme.whatsappTeal.withValues(
+                                    alpha: 0.2,
+                                  ),
+                            child: Icon(
+                              isPlayingThis
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: isMe
+                                  ? Colors.white
+                                  : VybinTheme.whatsappTeal,
+                              size: 24,
+                            ),
+                          ),
                         ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isPlayingThis
-                            ? _formatDuration(currentPos)
-                            : _formatDuration(totalDur),
-                        style: VybinTheme.caption.copyWith(
-                          color: isMe
-                              ? (theme.brightness == Brightness.dark
-                                    ? Colors.white70
-                                    : Colors.black87)
-                              : VybinTheme.secondaryText,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(15, (index) {
+                            final heights = [
+                              6,
+                              12,
+                              18,
+                              14,
+                              8,
+                              16,
+                              22,
+                              18,
+                              12,
+                              20,
+                              14,
+                              8,
+                              12,
+                              10,
+                              6,
+                            ];
+                            final barHeight = heights[index % heights.length]
+                                .toDouble();
+
+                            final barProgress = index / 15;
+                            final isActive =
+                                isPlayingThis && barProgress <= progress;
+
+                            return Container(
+                              width: 3,
+                              height: barHeight,
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? (isMe
+                                          ? Colors.greenAccent
+                                          : VybinTheme.whatsappGreen)
+                                    : (isMe
+                                          ? Colors.white.withValues(alpha: 0.4)
+                                          : VybinTheme.secondaryText.withValues(
+                                              alpha: 0.4,
+                                            )),
+                                borderRadius: BorderRadius.circular(1.5),
+                              ),
+                            );
+                          }),
                         ),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        _buildStatusTicks(widget.message.status),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isPlayingThis
+                                  ? _formatDuration(currentPos)
+                                  : _formatDuration(totalDur),
+                              style: VybinTheme.caption.copyWith(
+                                color: isMe
+                                    ? (theme.brightness == Brightness.dark
+                                          ? Colors.white70
+                                          : Colors.black87)
+                                    : VybinTheme.secondaryText,
+                              ),
+                            ),
+                            if (isMe) ...[
+                              const SizedBox(width: 4),
+                              _buildStatusTicks(widget.message.status),
+                            ],
+                          ],
+                        ),
                       ],
-                    ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1864,7 +2047,9 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+      final cacheFile = File(
+        '${tempDir.path}/decrypted_${messageId}_$filename',
+      );
 
       // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
@@ -1891,7 +2076,10 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
       if (response.statusCode != 200) {
         throw Exception('Download failed: Status ${response.statusCode}');
       }
-      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+      final encryptedBytes = await response.fold<List<int>>(
+        [],
+        (a, b) => a..addAll(b),
+      );
 
       // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
@@ -1981,7 +2169,11 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
                 alignment: Alignment.centerLeft,
               ),
               onPressed: _loadAndDecryptImage,
-              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              icon: const Icon(
+                Icons.refresh,
+                size: 14,
+                color: VybinTheme.whatsappGreen,
+              ),
               label: const Text(
                 'Retry Download',
                 style: TextStyle(
@@ -2117,7 +2309,9 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+      final cacheFile = File(
+        '${tempDir.path}/decrypted_${messageId}_$filename',
+      );
 
       // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
@@ -2143,7 +2337,10 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
       if (response.statusCode != 200) {
         throw Exception('Download failed: Status ${response.statusCode}');
       }
-      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+      final encryptedBytes = await response.fold<List<int>>(
+        [],
+        (a, b) => a..addAll(b),
+      );
 
       // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
@@ -2191,9 +2388,9 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         await OpenFile.open(_decryptedFile!.path);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open file: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Could not open file: $e')));
         }
       }
     }
@@ -2222,7 +2419,10 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
               ),
             ),
             SizedBox(width: 12),
-            Text('Downloading document...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(
+              'Downloading document...',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
           ],
         ),
       );
@@ -2252,7 +2452,11 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
                 alignment: Alignment.centerLeft,
               ),
               onPressed: _loadAndDecryptDocument,
-              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              icon: const Icon(
+                Icons.refresh,
+                size: 14,
+                color: VybinTheme.whatsappGreen,
+              ),
               label: const Text(
                 'Retry Download',
                 style: TextStyle(
@@ -2269,15 +2473,28 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
       content = ListTile(
         onTap: _openDocument,
         dense: true,
-        leading: const Icon(Icons.insert_drive_file, color: VybinTheme.whatsappGreen, size: 36),
+        leading: const Icon(
+          Icons.insert_drive_file,
+          color: VybinTheme.whatsappGreen,
+          size: 36,
+        ),
         title: Text(
           filename,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        subtitle: size.isNotEmpty ? Text(size, style: const TextStyle(color: Colors.white70)) : null,
-        trailing: const Icon(Icons.open_in_new, color: Colors.white54, size: 20),
+        subtitle: size.isNotEmpty
+            ? Text(size, style: const TextStyle(color: Colors.white70))
+            : null,
+        trailing: const Icon(
+          Icons.open_in_new,
+          color: Colors.white54,
+          size: 20,
+        ),
       );
     }
 
@@ -2309,7 +2526,11 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
           children: [
             content,
             Padding(
-              padding: const EdgeInsets.only(top: 2.0, right: 12.0, bottom: 6.0),
+              padding: const EdgeInsets.only(
+                top: 2.0,
+                right: 12.0,
+                bottom: 6.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -2399,7 +2620,9 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final cacheFile = File('${tempDir.path}/decrypted_${messageId}_$filename');
+      final cacheFile = File(
+        '${tempDir.path}/decrypted_${messageId}_$filename',
+      );
 
       // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
@@ -2425,7 +2648,10 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
       if (response.statusCode != 200) {
         throw Exception('Download failed: Status ${response.statusCode}');
       }
-      final encryptedBytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
+      final encryptedBytes = await response.fold<List<int>>(
+        [],
+        (a, b) => a..addAll(b),
+      );
 
       // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
@@ -2473,9 +2699,9 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         await OpenFile.open(_decryptedFile!.path);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open video: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Could not open video: $e')));
         }
       }
     }
@@ -2504,7 +2730,10 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
               ),
             ),
             SizedBox(width: 12),
-            Text('Downloading video...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(
+              'Downloading video...',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
           ],
         ),
       );
@@ -2534,7 +2763,11 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
                 alignment: Alignment.centerLeft,
               ),
               onPressed: _loadAndDecryptVideo,
-              icon: const Icon(Icons.refresh, size: 14, color: VybinTheme.whatsappGreen),
+              icon: const Icon(
+                Icons.refresh,
+                size: 14,
+                color: VybinTheme.whatsappGreen,
+              ),
               label: const Text(
                 'Retry Download',
                 style: TextStyle(
@@ -2559,10 +2792,19 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
           filename,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        subtitle: size.isNotEmpty ? Text(size, style: const TextStyle(color: Colors.white70)) : null,
-        trailing: const Icon(Icons.open_in_new, color: Colors.white54, size: 20),
+        subtitle: size.isNotEmpty
+            ? Text(size, style: const TextStyle(color: Colors.white70))
+            : null,
+        trailing: const Icon(
+          Icons.open_in_new,
+          color: Colors.white54,
+          size: 20,
+        ),
       );
     }
 
@@ -2594,7 +2836,11 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
           children: [
             content,
             Padding(
-              padding: const EdgeInsets.only(top: 2.0, right: 12.0, bottom: 6.0),
+              padding: const EdgeInsets.only(
+                top: 2.0,
+                right: 12.0,
+                bottom: 6.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
