@@ -20,6 +20,8 @@ import 'package:zego_uikit/zego_uikit.dart';
 import 'package:vybin/core/services/zego_signaling_extension.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 const int zegoAppID = 1912280269;
 const String zegoAppSign =
@@ -143,100 +145,106 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) async {
         if (state is AuthAuthenticated) {
-          try {
-            ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
-            await ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI([ZegoUIKitSignalingPlugin()]);
-            await ZegoUIKitPrebuiltCallInvitationService().init(
-              appID: zegoAppID,
-              appSign: zegoAppSign,
-              userID: state.user.uid,
-              userName: state.user.username,
-              plugins: [ZegoUIKitSignalingPlugin()],
-              requireConfig: (ZegoCallInvitationData data) {
-                final config = data.type == ZegoCallInvitationType.videoCall
-                    ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
-                    : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall();
+          final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+          if (isMobile) {
+            try {
+              ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
+              await ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI([ZegoUIKitSignalingPlugin()]);
+              await ZegoUIKitPrebuiltCallInvitationService().init(
+                appID: zegoAppID,
+                appSign: zegoAppSign,
+                userID: state.user.uid,
+                userName: state.user.username,
+                plugins: [ZegoUIKitSignalingPlugin()],
+                requireConfig: (ZegoCallInvitationData data) {
+                  final config = data.type == ZegoCallInvitationType.videoCall
+                      ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+                      : ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall();
 
-                config.layout = ZegoLayout.pictureInPicture(
-                  smallViewPosition: ZegoViewPosition.bottomRight,
-                );
+                  config.layout = ZegoLayout.pictureInPicture(
+                    smallViewPosition: ZegoViewPosition.bottomRight,
+                  );
 
-                config.topMenuBar = ZegoCallTopMenuBarConfig(
-                  isVisible: true,
-                  buttons: [
-                    ZegoCallMenuBarButtonName.minimizingButton,
-                  ],
-                );
-
-                config
-                    .audioVideoView
-                    .foregroundBuilder = (context, size, user, extraInfo) {
-                  // If the width is less than 300, it is the small PiP overlay. Hide the text!
-                  if (size.width < 300) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return Stack(
-                    children: [
-                      Positioned(
-                        top: MediaQuery.of(context).padding.top + 10,
-                        left: 20,
-                        right: 20,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color.fromRGBO(0, 0, 0, 0.6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            '🔒 Voice calls are secured in transit, but are NOT End-to-End Encrypted.',
-                            style: TextStyle(color: Colors.grey, fontSize: 11),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                  config.topMenuBar = ZegoCallTopMenuBarConfig(
+                    isVisible: true,
+                    buttons: [
+                      ZegoCallMenuBarButtonName.minimizingButton,
                     ],
                   );
-                };
 
-                return config;
-              },
-            );
-            // ignore: avoid_print
-            print("✅ ZEGO INITIALIZED SUCCESSFULLY");
+                  config
+                      .audioVideoView
+                      .foregroundBuilder = (context, size, user, extraInfo) {
+                    // If the width is less than 300, it is the small PiP overlay. Hide the text!
+                    if (size.width < 300) {
+                      return const SizedBox.shrink();
+                    }
 
-            ZegoUIKitSignalingPlugin().setupPeerToRoomCommandBridge();
-            _signalingSubscription?.cancel();
-            _signalingSubscription = ZegoUIKitSignalingPlugin()
-                .getInRoomCommandMessageReceivedEventStream()
-                .listen((event) async {
-              for (final msg in event.messages) {
-                try {
-                  final commandData = jsonDecode(utf8.decode(msg.message)) as Map<String, dynamic>;
-                  if (commandData['type'] == 'new_text') {
-                    await NotificationService.showNotification(
-                      id: DateTime.now().millisecondsSinceEpoch.hashCode,
-                      title: 'New Encrypted Message',
-                      body: 'New Encrypted Message',
+                    return Stack(
+                      children: [
+                        Positioned(
+                          top: MediaQuery.of(context).padding.top + 10,
+                          left: 20,
+                          right: 20,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(0, 0, 0, 0.6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              '🔒 Voice calls are secured in transit, but are NOT End-to-End Encrypted.',
+                              style: TextStyle(color: Colors.grey, fontSize: 11),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
                     );
+                  };
+
+                  return config;
+                },
+              );
+              // ignore: avoid_print
+              print("✅ ZEGO INITIALIZED SUCCESSFULLY");
+
+              ZegoUIKitSignalingPlugin().setupPeerToRoomCommandBridge();
+              _signalingSubscription?.cancel();
+              _signalingSubscription = ZegoUIKitSignalingPlugin()
+                  .getInRoomCommandMessageReceivedEventStream()
+                  .listen((event) async {
+                for (final msg in event.messages) {
+                  try {
+                    final commandData = jsonDecode(utf8.decode(msg.message)) as Map<String, dynamic>;
+                    if (commandData['type'] == 'new_text') {
+                      await NotificationService.showNotification(
+                        id: DateTime.now().millisecondsSinceEpoch.hashCode,
+                        title: 'New Encrypted Message',
+                        body: 'New Encrypted Message',
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('Failed to parse command message: $e');
                   }
-                } catch (e) {
-                  debugPrint('Failed to parse command message: $e');
                 }
-              }
-            });
-          } catch (e) {
-            // ignore: avoid_print
-            print("❌ ZEGO INIT ERROR: $e");
+              });
+            } catch (e) {
+              // ignore: avoid_print
+              print("❌ ZEGO INIT ERROR: $e");
+            }
           }
         } else if (state is AuthUnauthenticated ||
             state is AuthLoggedOutState) {
-          _signalingSubscription?.cancel();
-          _signalingSubscription = null;
-          ZegoUIKitPrebuiltCallInvitationService().uninit();
+          final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+          if (isMobile) {
+            _signalingSubscription?.cancel();
+            _signalingSubscription = null;
+            ZegoUIKitPrebuiltCallInvitationService().uninit();
+          }
         }
       },
       child: ValueListenableBuilder<ThemeMode>(
@@ -255,14 +263,17 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   home: const OnboardingScreen(),
                   debugShowCheckedModeBanner: false,
                   builder: (BuildContext context, Widget? child) {
+                    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
                     return Stack(
                       children: [
-                        child!,
-                        ZegoUIKitPrebuiltCallMiniOverlayPage(
-                          contextQuery: () {
-                            return navigatorKey.currentState?.context ?? context;
-                          },
-                        ),
+                        // ignore: use_null_aware_elements
+                        if (child != null) child,
+                        if (isMobile)
+                          ZegoUIKitPrebuiltCallMiniOverlayPage(
+                            contextQuery: () {
+                              return navigatorKey.currentState?.context ?? context;
+                            },
+                          ),
                       ],
                     );
                   },
@@ -276,14 +287,17 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   routerConfig: _router,
                   debugShowCheckedModeBanner: false,
                   builder: (BuildContext context, Widget? child) {
+                    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
                     return Stack(
                       children: [
-                        child!,
-                        ZegoUIKitPrebuiltCallMiniOverlayPage(
-                          contextQuery: () {
-                            return navigatorKey.currentState?.context ?? context;
-                          },
-                        ),
+                        // ignore: use_null_aware_elements
+                        if (child != null) child,
+                        if (isMobile)
+                          ZegoUIKitPrebuiltCallMiniOverlayPage(
+                            contextQuery: () {
+                              return navigatorKey.currentState?.context ?? context;
+                            },
+                          ),
                       ],
                     );
                   },
