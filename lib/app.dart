@@ -260,7 +260,7 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                         child!,
                         ZegoUIKitPrebuiltCallMiniOverlayPage(
                           contextQuery: () {
-                            return navigatorKey.currentState!.context;
+                            return navigatorKey.currentState?.context ?? context;
                           },
                         ),
                       ],
@@ -281,7 +281,7 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                         child!,
                         ZegoUIKitPrebuiltCallMiniOverlayPage(
                           contextQuery: () {
-                            return navigatorKey.currentState!.context;
+                            return navigatorKey.currentState?.context ?? context;
                           },
                         ),
                       ],
