@@ -11,7 +11,9 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/launcher_icon',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -23,9 +25,7 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _localNotifications.initialize(
-      settings: initSettings,
-    );
+    await _localNotifications.initialize(settings: initSettings);
   }
 
   static Future<void> showNotification({
@@ -59,7 +59,9 @@ class NotificationService {
     );
   }
 
-  static Future<void> decryptAndShowLocalNotification(RemoteMessage message) async {
+  static Future<void> decryptAndShowLocalNotification(
+    RemoteMessage message,
+  ) async {
     final senderUid = message.data['sender_uid'] as String?;
     final messageId = message.data['message_id'] as String?;
     if (senderUid == null || messageId == null) return;
@@ -86,9 +88,7 @@ class NotificationService {
           await FirebaseFirestore.instance
               .collection('conversations')
               .doc(conversationId)
-              .update({
-            'lastMessagePreview.status': 'delivered',
-          });
+              .update({'lastMessagePreview.status': 'delivered'});
         }
       } catch (e) {
         debugPrint('Error updating message delivery status in background: $e');

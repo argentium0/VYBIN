@@ -788,7 +788,88 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
     );
   }
 
+  Widget _buildCallLogBubble(Message message, bool isMe) {
+    final status = message.status; // 'missed' | 'declined' | 'completed'
+    
+    IconData iconData;
+    Color iconColor;
+    String text;
+
+    if (status == 'completed') {
+      iconData = Icons.call;
+      iconColor = Colors.green;
+      text = 'Voice Call';
+    } else {
+      iconData = Icons.call_missed;
+      iconColor = Colors.red;
+      text = status == 'declined' ? 'Declined Voice Call' : 'Missed Voice Call';
+    }
+
+    final formattedTime = _formatTime(message.timestamp);
+
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey[900]
+              : Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white10
+                : Colors.black12,
+            width: 0.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              iconData,
+              color: iconColor,
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black87,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              formattedTime,
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white38
+                    : Colors.black38,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatBubble(Message message, bool isMe) {
+    if (message.type == 'call_log') {
+      return _buildCallLogBubble(message, isMe);
+    }
     if (message.hasDecryptionError) {
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

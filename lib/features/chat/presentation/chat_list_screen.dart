@@ -13,6 +13,7 @@ import 'package:vybin/shared/models/user_model.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 import 'package:vybin/shared/utils/contact_display_helper.dart';
 import 'package:vybin/features/chat/data/chat_repository.dart';
+import 'package:vybin/features/chat/presentation/call_log_screen.dart';
 
 class ContactDetails {
   final String displayName;
@@ -61,6 +62,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   bool _showBanner = false;
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -248,23 +250,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
         String lastMessageText = '';
         if (hasLastMessage) {
           final preview = conv.lastMessagePreview!;
-          final myKey = preview.encryptedKeys[myUid];
-          if (myKey != null) {
-            try {
-              final chatRepo = context.read<ChatRepository>();
-              final decrypted = chatRepo.decryptMessage(
-                ciphertext: preview.ciphertext,
-                iv: preview.iv,
-                encryptedKey: myKey,
-              );
-              lastMessageText = decrypted.length > 30
-                  ? '${decrypted.substring(0, 30)}...'
-                  : decrypted;
-            } catch (_) {
-              lastMessageText = '🔒 Encrypted Message';
+          if (preview.type == 'call_log') {
+            final isMissed = preview.ciphertext == 'missed';
+            final isDeclined = preview.ciphertext == 'declined';
+            if (isMissed) {
+              lastMessageText = '📞 Missed call';
+            } else if (isDeclined) {
+              lastMessageText = '📞 Declined call';
+            } else {
+              lastMessageText = '📞 Completed call';
             }
           } else {
-            lastMessageText = '🔒 Encrypted Message';
+            final myKey = preview.encryptedKeys[myUid];
+            if (myKey != null) {
+              try {
+                final chatRepo = context.read<ChatRepository>();
+                final decrypted = chatRepo.decryptMessage(
+                  ciphertext: preview.ciphertext,
+                  iv: preview.iv,
+                  encryptedKey: myKey,
+                );
+                lastMessageText = decrypted.length > 30
+                    ? '${decrypted.substring(0, 30)}...'
+                    : decrypted;
+              } catch (_) {
+                lastMessageText = '🔒 Encrypted Message';
+              }
+            } else {
+              lastMessageText = '🔒 Encrypted Message';
+            }
           }
         }
 
@@ -390,115 +404,131 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: _isSearching
+      appBar: _currentIndex == 1
           ? AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    _isSearching = false;
-                    _searchController.clear();
-                  });
-                },
-              ),
-              title: TextField(
-                controller: _searchController,
-                autofocus: true,
+              centerTitle: false,
+              title: Text(
+                'Calls',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  fontFamily: 'System',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24.0,
+                  letterSpacing: 1.5,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : const Color(0xFF075E54),
                 ),
-                decoration: InputDecoration(
-                  hintText: 'Search conversations...',
-                  hintStyle: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                ),
-                onChanged: (_) => setState(() {}),
               ),
             )
-          : AppBar(
-              centerTitle: false,
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 32.0,
-                    height: 32.0,
-                    decoration: const BoxDecoration(shape: BoxShape.circle),
-                    clipBehavior: Clip.hardEdge,
-                    child: Image.asset(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? 'assets/images/logo_dark.png'
-                          : 'assets/images/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const SizedBox.shrink();
+          : (_isSearching
+              ? AppBar(
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = false;
+                        _searchController.clear();
+                      });
+                    },
+                  ),
+                  title: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search conversations...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                )
+              : AppBar(
+                  centerTitle: false,
+                  title: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 32.0,
+                        height: 32.0,
+                        decoration: const BoxDecoration(shape: BoxShape.circle),
+                        clipBehavior: Clip.hardEdge,
+                        child: Image.asset(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 'assets/images/logo_dark.png'
+                              : 'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'VYBIN',
+                        style: TextStyle(
+                          fontFamily: 'System',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 24.0,
+                          letterSpacing: 1.5,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFF075E54),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {
+                        setState(() {
+                          _isSearching = true;
+                        });
                       },
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'VYBIN',
-                    style: TextStyle(
-                      fontFamily: 'System',
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24.0,
-                      letterSpacing: 1.5,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : const Color(0xFF075E54),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    if (value == 'logout') {
-                      context.read<AuthBloc>().add(LogoutRequested());
-                    } else if (value == 'settings') {
-                      context.push('/settings').then((_) => _checkBannerVisibility());
-                    }
-                  },
-                  itemBuilder: (BuildContext context) {
-                    return [
-                      PopupMenuItem<String>(
-                        value: 'settings',
-                        child: Text(
-                          'Settings',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) {
+                        if (value == 'logout') {
+                          context.read<AuthBloc>().add(LogoutRequested());
+                        } else if (value == 'settings') {
+                          context.push('/settings').then((_) => _checkBannerVisibility());
+                        }
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return [
+                          PopupMenuItem<String>(
+                            value: 'settings',
+                            child: Text(
+                              'Settings',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'logout',
-                        child: Text(
-                          'Log Out',
-                          style: TextStyle(color: VybinTheme.errorColor),
-                        ),
-                      ),
-                    ];
-                  },
-                ),
-              ],
-            ),
+                          const PopupMenuItem<String>(
+                            value: 'logout',
+                            child: Text(
+                              'Log Out',
+                              style: TextStyle(color: VybinTheme.errorColor),
+                            ),
+                          ),
+                        ];
+                      },
+                    ),
+                  ],
+                )),
       drawer: Drawer(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: ListView(
@@ -590,40 +620,46 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          _buildIdentityBanner(),
-          Expanded(
-            child: BlocBuilder<ChatListBloc, ChatListState>(
-              builder: (context, state) {
-                if (state is ChatListLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
-                  );
-                } else if (state is ChatListError) {
-                  return Center(
-                    child: Text(
-                      state.errorMessage,
-                      style: const TextStyle(
-                        color: VybinTheme.errorColor,
-                        fontSize: 16,
-                      ),
-                    ),
-                  );
-                } else if (state is ChatListLoaded) {
-                  return _buildChatsView(state.conversations, state.participants);
-                }
-                return const SizedBox.shrink();
-              },
+      body: _currentIndex == 1
+          ? const CallLogScreen()
+          : Column(
+              children: [
+                _buildIdentityBanner(),
+                Expanded(
+                  child: BlocBuilder<ChatListBloc, ChatListState>(
+                    builder: (context, state) {
+                      if (state is ChatListLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
+                        );
+                      } else if (state is ChatListError) {
+                        return Center(
+                          child: Text(
+                            state.errorMessage,
+                            style: const TextStyle(
+                              color: VybinTheme.errorColor,
+                              fontSize: 16,
+                            ),
+                          ),
+                        );
+                      } else if (state is ChatListLoaded) {
+                        return _buildChatsView(state.conversations, state.participants);
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
+        currentIndex: _currentIndex,
         onTap: (index) {
-          if (index == 1) {
+          if (index == 2) {
             context.push('/settings').then((_) => _checkBannerVisibility());
+          } else {
+            setState(() {
+              _currentIndex = index;
+            });
           }
         },
         selectedItemColor: Theme.of(context).brightness == Brightness.dark
@@ -641,18 +677,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
             label: 'Chats',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.phone_outlined),
+            activeIcon: Icon(Icons.phone),
+            label: 'Calls',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: VybinTheme.whatsappGreen,
-        foregroundColor: Colors.white,
-        onPressed: () => context.push('/new-chat'),
-        child: const Icon(Icons.chat_outlined),
-      ),
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton(
+              backgroundColor: VybinTheme.whatsappGreen,
+              foregroundColor: Colors.white,
+              onPressed: () => context.push('/new-chat'),
+              child: const Icon(Icons.chat_outlined),
+            )
+          : null,
     );
   }
 }

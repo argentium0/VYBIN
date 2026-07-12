@@ -397,7 +397,12 @@ class ChatRepository {
         final data = doc.data();
         var msg = MessageModel.fromJson(data);
 
-        if (msg.deletedForEveryone || msg.isDeleted || data['isDeleted'] == true) {
+        if (msg.type == 'call_log') {
+          msg = msg.copyWith(
+            plaintext: () => null,
+            hasDecryptionError: false,
+          );
+        } else if (msg.deletedForEveryone || msg.isDeleted || data['isDeleted'] == true) {
           msg = msg.copyWith(
             plaintext: () => '🚫 This message was deleted.',
             isDeleted: true,
@@ -628,5 +633,77 @@ class ChatRepository {
       'mediaUrl': FieldValue.delete(),
       'deletedForEveryoneAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Writes a call log entry to both the conversation's messages and a root-level call_logs collection.
+  Future<void> logCall({
+    required String callId,
+    required String callerId,
+    required String receiverId,
+    required String status, // 'missed' | 'declined' | 'completed'
+  }) async {
+    final conversationId = generateConversationId(callerId, receiverId);
+
+    // Ensure the conversation document exists in Firestore
+    await createConversation(
+      conversationId: conversationId,
+      participantUids: [callerId, receiverId],
+    );
+
+    final messagesRef = _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages');
+
+    final messageDoc = messagesRef.doc(callId);
+
+    final callLogDoc = {
+      'messageId': callId,
+      'senderUid': callerId,
+      'callerId': callerId,
+      'receiverId': receiverId,
+      'type': 'call_log',
+      'status': status,
+      'timestamp': FieldValue.serverTimestamp(),
+      'iv': '',
+      'ciphertext': status,
+      'encryptedKeys': <String, String>{},
+      'deletedFor': <String>[],
+      'deletedForEveryone': false,
+    };
+
+    final batch = _firestore.batch();
+    batch.set(messageDoc, callLogDoc, SetOptions(merge: true));
+
+    // Update conversation last message details
+    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final updateData = <String, dynamic>{
+      'lastMessageAt': FieldValue.serverTimestamp(),
+      'lastMessagePreview': {
+        'senderUid': callerId,
+        'type': 'call_log',
+        'iv': '',
+        'ciphertext': status,
+        'encryptedKeys': <String, String>{},
+        'status': status,
+      },
+    };
+    if (status == 'missed') {
+      updateData['unreadCount.$receiverId'] = FieldValue.increment(1);
+    }
+    batch.update(conversationRef, updateData);
+
+    // Write to root-level call_logs collection
+    final callLogRef = _firestore.collection('call_logs').doc(callId);
+    batch.set(callLogRef, {
+      'type': 'call_log',
+      'status': status,
+      'callerId': callerId,
+      'receiverId': receiverId,
+      'timestamp': FieldValue.serverTimestamp(),
+      'participantUids': [callerId, receiverId],
+    }, SetOptions(merge: true));
+
+    await batch.commit();
   }
 }

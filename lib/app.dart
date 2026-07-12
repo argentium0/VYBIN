@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:vybin/core/services/active_chat_tracker.dart';
 import 'package:vybin/core/services/notification_service.dart';
+import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,11 @@ class VybinApp extends StatefulWidget {
 class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
   late final GoRouter _router;
   StreamSubscription? _signalingSubscription;
+  String? _incomingCallerId;
+  String? _incomingCallID;
+  String? _activeCallID;
+  String? _activeCallerId;
+  String? _activeReceiverId;
 
   @override
   void initState() {
@@ -156,6 +162,84 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                 userID: state.user.uid,
                 userName: state.user.username,
                 plugins: [ZegoUIKitSignalingPlugin()],
+                invitationEvents: ZegoUIKitPrebuiltCallInvitationEvents(
+                  onIncomingCallTimeout: (String callID, ZegoCallUser caller) async {
+                    try {
+                      final chatRepository = context.read<ChatRepository>();
+                      await chatRepository.logCall(
+                        callId: callID,
+                        callerId: caller.id,
+                        receiverId: state.user.uid,
+                        status: 'missed',
+                      );
+                    } catch (e) {
+                      debugPrint('Error logging missed call: $e');
+                    }
+                  },
+                  onIncomingCallDeclineButtonPressed: () async {
+                    try {
+                      final callerId = _incomingCallerId;
+                      final callID = _incomingCallID;
+                      if (callerId != null && callID != null) {
+                        final chatRepository = context.read<ChatRepository>();
+                        await chatRepository.logCall(
+                          callId: callID,
+                          callerId: callerId,
+                          receiverId: state.user.uid,
+                          status: 'declined',
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint('Error logging declined call: $e');
+                    }
+                  },
+                  onOutgoingCallDeclined: (String callID, ZegoCallUser callee, String customData) async {
+                    try {
+                      final chatRepository = context.read<ChatRepository>();
+                      await chatRepository.logCall(
+                        callId: callID,
+                        callerId: state.user.uid,
+                        receiverId: callee.id,
+                        status: 'declined',
+                      );
+                    } catch (e) {
+                      debugPrint('Error logging declined call: $e');
+                    }
+                  },
+                  onIncomingCallReceived: (String callID, ZegoCallUser caller, ZegoCallInvitationType callType, List<ZegoCallUser> callees, String customData) {
+                    _incomingCallerId = caller.id;
+                    _incomingCallID = callID;
+                    _activeCallID = callID;
+                    _activeCallerId = caller.id;
+                    _activeReceiverId = state.user.uid;
+                  },
+                  onOutgoingCallSent: (String callID, ZegoCallUser caller, ZegoCallInvitationType callType, List<ZegoCallUser> callees, String customData) {
+                    _activeCallID = callID;
+                    _activeCallerId = state.user.uid;
+                    _activeReceiverId = callees.isNotEmpty ? callees.first.id : '';
+                  },
+                ),
+                events: ZegoUIKitPrebuiltCallEvents(
+                  onCallEnd: (ZegoCallEndEvent event, VoidCallback defaultAction) async {
+                    try {
+                      if (_activeCallID == event.callID && _activeCallerId != null && _activeReceiverId != null) {
+                        final chatRepository = context.read<ChatRepository>();
+                        await chatRepository.logCall(
+                          callId: event.callID,
+                          callerId: _activeCallerId!,
+                          receiverId: _activeReceiverId!,
+                          status: 'completed',
+                        );
+                        _activeCallID = null;
+                        _activeCallerId = null;
+                        _activeReceiverId = null;
+                      }
+                    } catch (e) {
+                      debugPrint('Error logging completed call: $e');
+                    }
+                    defaultAction();
+                  },
+                ),
                 requireConfig: (ZegoCallInvitationData data) {
                   final config = data.type == ZegoCallInvitationType.videoCall
                       ? ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()

@@ -16,7 +16,9 @@ import 'package:vybin/firebase_options.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
+  //print(" BREADCRUMB 1: Entering main()");
   WidgetsFlutterBinding.ensureInitialized();
+  //print(" BREADCRUMB 2: Flutter Binding complete");
 
   // Override Flutter's default error widget to avoid Red Screen of Death
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -117,6 +119,13 @@ void main() async {
     }
   });
 
+  //print(" BREADCRUMB 3: Firebase initialized");
+
+  // ( Zego init)
+  //print(" BREADCRUMB 4: Starting Zego Init...");
+  // await ZegoUIKitPrebuiltCallInvitationService().init(...)
+  //print(" BREADCRUMB 5: Zego Init Complete!");
+
   final prefs = await SharedPreferences.getInstance();
   final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
 
@@ -136,4 +145,5 @@ void main() async {
       ),
     ),
   );
+  //print(" BREADCRUMB 6: runApp executed");
 }
