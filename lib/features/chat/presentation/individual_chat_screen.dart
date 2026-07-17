@@ -515,7 +515,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                       : cleanName.toUpperCase();
 
                   final statusText = _formatPresence(user);
-                  final isOnline = user?.onlineStatus == 'online';
+                  final isOnline = user?.isOnline ?? false;
 
                   return GestureDetector(
                     onTap: () {
@@ -556,8 +556,9 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                               valueListenable:
                                   VybinApp.showActivityStatusNotifier,
                               builder: (context, showStatus, _) {
-                                if (!showStatus || statusText.isEmpty)
+                                if (!showStatus || statusText.isEmpty) {
                                   return const SizedBox.shrink();
+                                }
 
                                 return Row(
                                   children: [
@@ -1119,7 +1120,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
 
   String _formatPresence(UserModel? user) {
     if (user == null) return '';
-    if (user.onlineStatus == 'online') {
+    if (user.isOnline) {
       return 'Online';
     }
 

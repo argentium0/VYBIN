@@ -11,6 +11,7 @@ class UserModel extends Equatable {
   final String publicKey; // RSA public key in PEM format
   final String? fcmToken;
   final String onlineStatus; // 'online' | 'offline'
+  final bool isOnline;
   final DateTime lastSeen;
   final String about;
   final DateTime createdAt;
@@ -26,6 +27,7 @@ class UserModel extends Equatable {
     required this.publicKey,
     this.fcmToken,
     required this.onlineStatus,
+    this.isOnline = false,
     required this.lastSeen,
     required this.about,
     required this.createdAt,
@@ -44,6 +46,7 @@ class UserModel extends Equatable {
       publicKey: json['publicKey'] as String? ?? '',
       fcmToken: json['fcmToken'] as String?,
       onlineStatus: json['onlineStatus'] as String? ?? 'offline',
+      isOnline: json['isOnline'] as bool? ?? false,
       lastSeen: _parseDateTime(json['lastSeen']),
       about: json['about'] as String? ?? 'Hey there! I am using VYBIN',
       createdAt: _parseDateTime(json['createdAt']),
@@ -66,6 +69,7 @@ class UserModel extends Equatable {
       'publicKey': publicKey,
       'fcmToken': fcmToken,
       'onlineStatus': onlineStatus,
+      'isOnline': isOnline,
       'lastSeen': lastSeen.toIso8601String(), // Serialize to ISO string for JSON compatibility
       'about': about,
       'createdAt': createdAt.toIso8601String(),
@@ -84,6 +88,7 @@ class UserModel extends Equatable {
     String? publicKey,
     String? Function()? fcmToken,
     String? onlineStatus,
+    bool? isOnline,
     DateTime? lastSeen,
     String? about,
     DateTime? createdAt,
@@ -99,6 +104,7 @@ class UserModel extends Equatable {
       publicKey: publicKey ?? this.publicKey,
       fcmToken: fcmToken != null ? fcmToken() : this.fcmToken,
       onlineStatus: onlineStatus ?? this.onlineStatus,
+      isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
       about: about ?? this.about,
       createdAt: createdAt ?? this.createdAt,
@@ -117,6 +123,7 @@ class UserModel extends Equatable {
         publicKey,
         fcmToken,
         onlineStatus,
+        isOnline,
         lastSeen,
         about,
         createdAt,

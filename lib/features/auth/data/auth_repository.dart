@@ -93,9 +93,10 @@ class AuthRepository {
           
           await _firestore.collection('users').doc(fbUser.uid).update({
             'onlineStatus': 'online',
+            'isOnline': true,
             'lastSeen': DateTime.now().toIso8601String(),
           });
-          return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
+          return user.copyWith(onlineStatus: 'online', isOnline: true, lastSeen: DateTime.now());
         }
       }
 
@@ -134,10 +135,11 @@ class AuthRepository {
       // 4. Update online status in Firestore
       await _firestore.collection('users').doc(fbUser.uid).update({
         'onlineStatus': 'online',
+        'isOnline': true,
         'lastSeen': DateTime.now().toIso8601String(),
       });
 
-      return user.copyWith(onlineStatus: 'online', lastSeen: DateTime.now());
+      return user.copyWith(onlineStatus: 'online', isOnline: true, lastSeen: DateTime.now());
     } on fb.FirebaseAuthException catch (e) {
       if (e.code == 'network-request-failed') {
         throw NetworkException();
@@ -230,6 +232,7 @@ class AuthRepository {
           publicKey: publicKeyPem,
           onlineStatus:
               'offline', // Default state on register is offline until they log in or session triggers online
+          isOnline: false,
           lastSeen: DateTime.now(),
           about: 'Hey there! I am using VYBIN',
           createdAt: DateTime.now(),
@@ -323,6 +326,7 @@ class AuthRepository {
       try {
         await _firestore.collection('users').doc(fbUser.uid).update({
           'onlineStatus': 'offline',
+          'isOnline': false,
           'lastSeen': DateTime.now().toIso8601String(),
         });
       } catch (_) {
@@ -596,12 +600,14 @@ class AuthRepository {
     // 3. Update online status and session ID in Firestore
     await _firestore.collection('users').doc(user.uid).update({
       'onlineStatus': 'online',
+      'isOnline': true,
       'lastSeen': DateTime.now().toIso8601String(),
       'currentSessionId': newSessionId,
     });
 
     return user.copyWith(
       onlineStatus: 'online',
+      isOnline: true,
       lastSeen: DateTime.now(),
       currentSessionId: () => newSessionId,
     );
@@ -639,6 +645,7 @@ class AuthRepository {
           'email': 'team@vybin.internal',
           'publicKey': user.publicKey, // Use user's public key as dummy PEM
           'onlineStatus': 'online',
+          'isOnline': true,
           'lastSeen': DateTime.now().toIso8601String(),
           'about': 'System Account',
           'createdAt': DateTime.now().toIso8601String(),

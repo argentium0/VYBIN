@@ -12,6 +12,7 @@ import 'package:vybin/features/chat/data/chat_repository.dart';
 import 'package:vybin/core/services/encryption_service.dart';
 import 'package:vybin/core/services/notification_service.dart';
 import 'package:vybin/firebase_options.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -73,6 +74,12 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(anonymizedBackgroundMessageHandler);
 
   // Request push notification permissions
+  try {
+    await Permission.notification.request();
+  } catch (e) {
+    debugPrint('Error requesting permission_handler notification permission: $e');
+  }
+
   final messaging = FirebaseMessaging.instance;
   try {
     await messaging.requestPermission(

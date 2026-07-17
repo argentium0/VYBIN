@@ -120,14 +120,17 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       FirebaseFirestore.instance.collection('users').doc(myUid).update({
+        'isOnline': true,
         'onlineStatus': 'online',
-        'lastSeen': DateTime.now().toIso8601String(),
+        'lastSeen': FieldValue.serverTimestamp(),
       });
     } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
       FirebaseFirestore.instance.collection('users').doc(myUid).update({
+        'isOnline': false,
         'onlineStatus': 'offline',
-        'lastSeen': DateTime.now().toIso8601String(),
+        'lastSeen': FieldValue.serverTimestamp(),
       });
     }
   }
@@ -162,6 +165,16 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                 userID: state.user.uid,
                 userName: state.user.username,
                 plugins: [ZegoUIKitSignalingPlugin()],
+                notificationConfig: ZegoCallInvitationNotificationConfig(
+                  androidNotificationConfig: ZegoCallAndroidNotificationConfig(
+                    showOnFullScreen: true,
+                    showOnLockedScreen: true,
+                    callChannel: ZegoCallAndroidNotificationChannelConfig(
+                      channelID: "Call_Channel",
+                      channelName: "Call Notifications",
+                    ),
+                  ),
+                ),
                 invitationEvents: ZegoUIKitPrebuiltCallInvitationEvents(
                   onIncomingCallTimeout: (String callID, ZegoCallUser caller) async {
                     try {
@@ -174,6 +187,19 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                       );
                     } catch (e) {
                       debugPrint('Error logging missed call: $e');
+                    }
+                  },
+                  onIncomingCallCanceled: (String callID, ZegoCallUser caller, String customData) async {
+                    try {
+                      final chatRepository = context.read<ChatRepository>();
+                      await chatRepository.logCall(
+                        callId: callID,
+                        callerId: caller.id,
+                        receiverId: state.user.uid,
+                        status: 'missed',
+                      );
+                    } catch (e) {
+                      debugPrint('Error logging missed call (canceled): $e');
                     }
                   },
                   onIncomingCallDeclineButtonPressed: () async {

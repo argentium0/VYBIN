@@ -456,6 +456,7 @@ class ChatRepository {
         if (currentUser != null) {
           controller.add(currentUser!.copyWith(
             onlineStatus: 'offline',
+            isOnline: false,
             lastSeen: DateTime.fromMillisecondsSinceEpoch(0),
           ));
         } else {
