@@ -87,9 +87,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.amber.withValues(alpha: 0.15),
-        border: const Border(
-          bottom: BorderSide(color: Colors.amber, width: 1),
-        ),
+        border: const Border(bottom: BorderSide(color: Colors.amber, width: 1)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -99,11 +97,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           const Expanded(
             child: Text(
               '🔒 Secure your identity: Export your device backup blob from Settings to allow multi-device migration.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                height: 1.3,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 13, height: 1.3),
             ),
           ),
           const SizedBox(width: 8),
@@ -137,11 +131,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       icon = Icons.check;
       color = VybinTheme.secondaryText;
     }
-    return Icon(
-      icon,
-      color: color,
-      size: 16,
-    );
+    return Icon(icon, color: color, size: 16);
   }
 
   @override
@@ -155,7 +145,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     Map<String, UserModel> participants,
   ) {
     final authState = context.read<AuthBloc>().state;
-    final myUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+    final myUid = authState is AuthAuthenticated
+        ? authState.user.uid
+        : 'my_uid_123';
 
     final filteredConversations = conversations.where((conv) {
       if (!_isSearching) return true;
@@ -239,7 +231,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
           });
         }
 
-        final cleanName = displayName.startsWith('@') ? displayName.substring(1) : displayName;
+        final cleanName = displayName.startsWith('@')
+            ? displayName.substring(1)
+            : displayName;
         final avatarInitials = cleanName.length >= 2
             ? cleanName.substring(0, 2).toUpperCase()
             : cleanName.toUpperCase();
@@ -291,7 +285,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
             vertical: 8,
           ),
           leading: StreamBuilder<UserModel?>(
-            stream: context.read<ChatRepository>().getUserStream(otherUid, myUid),
+            stream: context.read<ChatRepository>().getUserStream(
+              otherUid,
+              myUid,
+            ),
             builder: (context, snapshot) {
               final user = snapshot.data;
               final livePhotoUrl = user?.profilePhotoUrl;
@@ -299,7 +296,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
               return CircleAvatar(
                 radius: 26,
                 backgroundColor: VybinTheme.whatsappTeal,
-                backgroundImage: (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
+                backgroundImage:
+                    (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
                     ? NetworkImage(livePhotoUrl)
                     : null,
                 child: (livePhotoUrl == null || livePhotoUrl.isEmpty)
@@ -391,11 +389,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     if (authState is AuthNeedsMigrationState) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     UserModel? currentUser;
     if (authState is AuthAuthenticated) {
@@ -421,114 +415,121 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
             )
           : (_isSearching
-              ? AppBar(
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      setState(() {
-                        _isSearching = false;
-                        _searchController.clear();
-                      });
-                    },
-                  ),
-                  title: TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search conversations...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                )
-              : AppBar(
-                  centerTitle: false,
-                  title: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 32.0,
-                        height: 32.0,
-                        decoration: const BoxDecoration(shape: BoxShape.circle),
-                        clipBehavior: Clip.hardEdge,
-                        child: Image.asset(
-                          Theme.of(context).brightness == Brightness.dark
-                              ? 'assets/images/logo_dark.png'
-                              : 'assets/images/logo.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'VYBIN',
-                        style: TextStyle(
-                          fontFamily: 'System',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 24.0,
-                          letterSpacing: 1.5,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : const Color(0xFF075E54),
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.search),
+                ? AppBar(
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back),
                       onPressed: () {
                         setState(() {
-                          _isSearching = true;
+                          _isSearching = false;
+                          _searchController.clear();
                         });
                       },
                     ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      onSelected: (value) {
-                        if (value == 'logout') {
-                          context.read<AuthBloc>().add(LogoutRequested());
-                        } else if (value == 'settings') {
-                          context.push('/settings').then((_) => _checkBannerVisibility());
-                        }
-                      },
-                      itemBuilder: (BuildContext context) {
-                        return [
-                          PopupMenuItem<String>(
-                            value: 'settings',
-                            child: Text(
-                              'Settings',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
+                    title: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search conversations...',
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  )
+                : AppBar(
+                    centerTitle: false,
+                    title: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 32.0,
+                          height: 32.0,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                          ),
+                          clipBehavior: Clip.hardEdge,
+                          child: Image.asset(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 'assets/images/logo_dark.png'
+                                : 'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'VYBIN',
+                          style: TextStyle(
+                            fontFamily: 'System',
+                            fontWeight: FontWeight.w900,
+                            fontSize: 24.0,
+                            letterSpacing: 1.5,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFF075E54),
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () {
+                          setState(() {
+                            _isSearching = true;
+                          });
+                        },
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (value) {
+                          if (value == 'logout') {
+                            context.read<AuthBloc>().add(LogoutRequested());
+                          } else if (value == 'settings') {
+                            context
+                                .push('/settings')
+                                .then((_) => _checkBannerVisibility());
+                          }
+                        },
+                        itemBuilder: (BuildContext context) {
+                          return [
+                            PopupMenuItem<String>(
+                              value: 'settings',
+                              child: Text(
+                                'Settings',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
                               ),
                             ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'logout',
-                            child: Text(
-                              'Log Out',
-                              style: TextStyle(color: VybinTheme.errorColor),
+                            const PopupMenuItem<String>(
+                              value: 'logout',
+                              child: Text(
+                                'Log Out',
+                                style: TextStyle(color: VybinTheme.errorColor),
+                              ),
                             ),
-                          ),
-                        ];
-                      },
-                    ),
-                  ],
-                )),
+                          ];
+                        },
+                      ),
+                    ],
+                  )),
       drawer: Drawer(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: ListView(
@@ -630,7 +631,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     builder: (context, state) {
                       if (state is ChatListLoading) {
                         return const Center(
-                          child: CircularProgressIndicator(color: VybinTheme.whatsappGreen),
+                          child: CircularProgressIndicator(
+                            color: VybinTheme.whatsappGreen,
+                          ),
                         );
                       } else if (state is ChatListError) {
                         return Center(
@@ -643,7 +646,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         );
                       } else if (state is ChatListLoaded) {
-                        return _buildChatsView(state.conversations, state.participants);
+                        return _buildChatsView(
+                          state.conversations,
+                          state.participants,
+                        );
                       }
                       return const SizedBox.shrink();
                     },

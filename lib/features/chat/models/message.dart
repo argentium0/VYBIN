@@ -2,16 +2,15 @@ class Message {
   final String messageId;
   final String senderUid;
   final DateTime timestamp;
-  final String type; // 'text' | 'image' | 'voice' | 'document'
+  final String type;
 
   final String? iv;
   final String? ciphertext;
   final Map<String, String>? encryptedKeys;
 
-  // Transient field for local MVP before full encryption pipeline is built
   final String? plaintext;
 
-  final String status; // 'sent' | 'delivered' | 'read' | 'failed'
+  final String status;
   final DateTime? deliveredAt;
   final DateTime? readAt;
 
@@ -21,7 +20,7 @@ class Message {
   final int? mediaSize;
   final String? mediaMimeType;
   final String? mediaOriginalFilename;
-  final int? durationMs; // Voice recording duration in milliseconds
+  final int? durationMs;
 
   final List<String> deletedFor;
   final bool deletedForEveryone;
@@ -97,7 +96,8 @@ class Message {
       mediaEncryptedKeys: mediaEncryptedKeys ?? this.mediaEncryptedKeys,
       mediaSize: mediaSize ?? this.mediaSize,
       mediaMimeType: mediaMimeType ?? this.mediaMimeType,
-      mediaOriginalFilename: mediaOriginalFilename ?? this.mediaOriginalFilename,
+      mediaOriginalFilename:
+          mediaOriginalFilename ?? this.mediaOriginalFilename,
       durationMs: durationMs ?? this.durationMs,
       deletedFor: deletedFor ?? this.deletedFor,
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
@@ -120,21 +120,22 @@ class Message {
       ),
       plaintext: map['plaintext'] as String?,
       status: map['status'] as String,
-      deliveredAt: map['deliveredAt'] != null ? _parseDateTime(map['deliveredAt']) : null,
+      deliveredAt: map['deliveredAt'] != null
+          ? _parseDateTime(map['deliveredAt'])
+          : null,
       readAt: map['readAt'] != null ? _parseDateTime(map['readAt']) : null,
       mediaUrl: map['mediaUrl'] as String?,
       mediaIv: map['mediaIv'] as String?,
-      mediaEncryptedKeys: (map['mediaEncryptedKeys'] as Map<String, dynamic>?)?.map(
-        (key, value) => MapEntry(key, value as String),
-      ),
+      mediaEncryptedKeys: (map['mediaEncryptedKeys'] as Map<String, dynamic>?)
+          ?.map((key, value) => MapEntry(key, value as String)),
       mediaSize: map['mediaSize'] as int?,
       mediaMimeType: map['mediaMimeType'] as String?,
       mediaOriginalFilename: map['mediaOriginalFilename'] as String?,
       durationMs: map['durationMs'] as int?,
       deletedFor: List<String>.from(map['deletedFor'] ?? []),
       deletedForEveryone: map['deletedForEveryone'] as bool? ?? false,
-      deletedForEveryoneAt: map['deletedForEveryoneAt'] != null 
-          ? _parseDateTime(map['deletedForEveryoneAt']) 
+      deletedForEveryoneAt: map['deletedForEveryoneAt'] != null
+          ? _parseDateTime(map['deletedForEveryoneAt'])
           : null,
       isDeleted: map['isDeleted'] as bool? ?? false,
       hasDecryptionError: map['hasDecryptionError'] as bool? ?? false,

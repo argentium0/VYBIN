@@ -50,7 +50,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
         _nicknameController.text = cachedNickname;
       });
     } else {
-      // Check if there is a simulated alias fallback
       final simulatedAlias = localContactAliases[widget.userId];
       if (simulatedAlias != null) {
         setState(() {
@@ -159,7 +158,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
           final user = snapshot.data!;
           final fingerprint = _calculateFingerprint(user.publicKey);
 
-          // Initials for avatar
           final cleanName = user.displayName.isNotEmpty
               ? user.displayName
               : user.username;
@@ -171,7 +169,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 32),
-                // Prominent Profile Picture Display
+
                 Center(
                   child: Stack(
                     children: [
@@ -216,7 +214,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Username Render
+
                 Text(
                   '@${user.username}',
                   style: TextStyle(
@@ -226,7 +224,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Display Name
+
                 Text(
                   user.displayName.isNotEmpty
                       ? user.displayName
@@ -239,7 +237,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Profile info card (Cyberpunk aesthetic)
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(20),
@@ -268,7 +265,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // Nickname Custom Field
+
                       TextFormField(
                         controller: _nicknameController,
                         style: const TextStyle(color: Colors.white),
@@ -305,7 +302,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // E2EE status & verification hash section
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(20),
@@ -354,7 +350,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Cryptographic Fingerprint block
+
                       GestureDetector(
                         onTap: () {
                           Clipboard.setData(ClipboardData(text: fingerprint));

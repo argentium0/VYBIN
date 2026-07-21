@@ -17,7 +17,8 @@ class CallLogScreen extends StatelessWidget {
       final hour = dateTime.hour.toString().padLeft(2, '0');
       final minute = dateTime.minute.toString().padLeft(2, '0');
       return '$hour:$minute';
-    } else if (diff.inDays == 1 || (diff.inDays == 0 && now.day != dateTime.day)) {
+    } else if (diff.inDays == 1 ||
+        (diff.inDays == 0 && now.day != dateTime.day)) {
       return 'Yesterday';
     } else {
       return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
@@ -28,9 +29,7 @@ class CallLogScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (myUid.isEmpty) {
-      return const Center(
-        child: Text('User not authenticated'),
-      );
+      return const Center(child: Text('User not authenticated'));
     }
 
     final chatRepository = context.read<ChatRepository>();
@@ -65,12 +64,12 @@ class CallLogScreen extends StatelessWidget {
           );
         }
 
-        // Sort descending by timestamp manually to avoid Firestore composite index requirement.
-        final sortedDocs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
+        final sortedDocs =
+            List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
         sortedDocs.sort((a, b) {
           final aTimeVal = a.data()['timestamp'];
           final bTimeVal = b.data()['timestamp'];
-          
+
           DateTime parseTime(dynamic val) {
             if (val == null) return DateTime.now();
             if (val is Timestamp) return val.toDate();
@@ -102,9 +101,11 @@ class CallLogScreen extends StatelessWidget {
             DateTime parseTime(dynamic val) {
               if (val == null) return DateTime.now();
               if (val is Timestamp) return val.toDate();
-              if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+              if (val is String)
+                return DateTime.tryParse(val) ?? DateTime.now();
               return DateTime.now();
             }
+
             final timestamp = parseTime(timestampVal);
 
             final isOutgoing = callerId == myUid;
@@ -124,7 +125,6 @@ class CallLogScreen extends StatelessWidget {
                     ? cleanName.substring(0, 2).toUpperCase()
                     : cleanName.toUpperCase();
 
-                // Subtitle details
                 IconData callIcon;
                 Color callColor;
                 String subtitleText;
@@ -151,8 +151,8 @@ class CallLogScreen extends StatelessWidget {
                     backgroundColor: VybinTheme.whatsappTeal,
                     backgroundImage:
                         (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
-                            ? NetworkImage(livePhotoUrl)
-                            : null,
+                        ? NetworkImage(livePhotoUrl)
+                        : null,
                     child: (livePhotoUrl == null || livePhotoUrl.isEmpty)
                         ? Text(
                             initials,
@@ -176,11 +176,7 @@ class CallLogScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Row(
                       children: [
-                        Icon(
-                          callIcon,
-                          color: callColor,
-                          size: 14,
-                        ),
+                        Icon(callIcon, color: callColor, size: 14),
                         const SizedBox(width: 4),
                         Text(
                           '$subtitleText • ${_formatCallLogTime(timestamp)}',
@@ -200,9 +196,7 @@ class CallLogScreen extends StatelessWidget {
                     onPressed: () async {
                       try {
                         await ZegoUIKitPrebuiltCallInvitationService().send(
-                          invitees: [
-                            ZegoCallUser(otherUid, displayName),
-                          ],
+                          invitees: [ZegoCallUser(otherUid, displayName)],
                           isVideoCall: false,
                           resourceID: 'vybin_call_resource',
                         );

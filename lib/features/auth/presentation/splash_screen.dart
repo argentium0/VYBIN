@@ -17,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Fire AppStarted event on startup
+
     context.read<AuthBloc>().add(AppStarted());
   }
 
@@ -37,7 +37,6 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo: Lock icon inside a chat bubble (Spec 9.1)
               Image.asset(
                 Theme.of(context).brightness == Brightness.dark
                     ? 'assets/images/logo_dark.png'
@@ -54,19 +53,15 @@ class _SplashScreenState extends State<SplashScreen> {
                         size: 110,
                       ),
                       const Padding(
-                        padding: EdgeInsets.only(bottom: 12.0), // offset for the chat bubble tail
-                        child: Icon(
-                          Icons.lock,
-                          color: Colors.white,
-                          size: 45,
-                        ),
+                        padding: EdgeInsets.only(bottom: 12.0),
+                        child: Icon(Icons.lock, color: Colors.white, size: 45),
                       ),
                     ],
                   );
                 },
               ),
               const SizedBox(height: 24),
-              // App Title
+
               Text(
                 'VYBIN',
                 style: VybinTheme.headline1.copyWith(
@@ -76,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Subtitle
+
               Text(
                 'Privacy-First Encrypted Chat',
                 style: VybinTheme.caption.copyWith(
@@ -86,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 48),
-              // Loading Indicator
+
               const SizedBox(
                 width: 24,
                 height: 24,

@@ -21,15 +21,16 @@ class ChatRepository {
     FirebaseFirestore? firestore,
     EncryptionService? encryptionService,
     MediaService? mediaService,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _encryptionService = encryptionService ?? EncryptionService(),
-        _mediaService = mediaService ?? MediaService();
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _encryptionService = encryptionService ?? EncryptionService(),
+       _mediaService = mediaService ?? MediaService();
 
-  /// Queries `usernames/{input}` for an exact match.
-  /// If found, fetches and returns the `users/{uid}` document.
   Future<UserModel?> searchUserByUsername(String username) async {
     final sanitizedUsername = username.trim().toLowerCase();
-    final doc = await _firestore.collection('usernames').doc(sanitizedUsername).get();
+    final doc = await _firestore
+        .collection('usernames')
+        .doc(sanitizedUsername)
+        .get();
     if (!doc.exists) return null;
 
     final uid = doc.data()?['uid'] as String?;
@@ -38,7 +39,6 @@ class ChatRepository {
     return getUserById(uid);
   }
 
-  /// Fetches a user document by their UID.
   Future<UserModel?> getUserById(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
@@ -49,14 +49,11 @@ class ChatRepository {
     return UserModel.fromJson(data);
   }
 
-  /// Deterministically generates a conversation ID from two UIDs.
-  /// Sorts them alphabetically and joins them with an underscore.
   String generateConversationId(String uid1, String uid2) {
     final sorted = [uid1, uid2]..sort();
     return sorted.join('_');
   }
 
-  /// Creates a conversation document in `conversations/{conversationId}` if it doesn't exist.
   Future<void> createConversation({
     required String conversationId,
     required List<String> participantUids,
@@ -83,38 +80,38 @@ class ChatRepository {
     }
   }
 
-  /// Real-time stream of conversations for the current user, ordered by `lastMessageAt` descending.
   Stream<List<ConversationModel>> getConversationsStream(String currentUid) {
     return _firestore
         .collection('conversations')
         .where('participantUids', arrayContains: currentUid)
         .snapshots()
         .map((snapshot) {
-      final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(snapshot.docs);
-      final now = DateTime.now();
+          final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(
+            snapshot.docs,
+          );
+          final now = DateTime.now();
 
-      DateTime parseTimestamp(dynamic val) {
-        if (val == null) return now;
-        if (val is Timestamp) return val.toDate();
-        if (val is String) return DateTime.tryParse(val) ?? now;
-        if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
-        return now;
-      }
+          DateTime parseTimestamp(dynamic val) {
+            if (val == null) return now;
+            if (val is Timestamp) return val.toDate();
+            if (val is String) return DateTime.tryParse(val) ?? now;
+            if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+            return now;
+          }
 
-      docs.sort((a, b) {
-        final aTime = parseTimestamp(a.data()['lastMessageAt']);
-        final bTime = parseTimestamp(b.data()['lastMessageAt']);
-        return bTime.compareTo(aTime); // Descending (most recent first)
-      });
+          docs.sort((a, b) {
+            final aTime = parseTimestamp(a.data()['lastMessageAt']);
+            final bTime = parseTimestamp(b.data()['lastMessageAt']);
+            return bTime.compareTo(aTime);
+          });
 
-      return docs.map((doc) {
-        final data = doc.data();
-        return ConversationModel.fromJson(data);
-      }).toList();
-    });
+          return docs.map((doc) {
+            final data = doc.data();
+            return ConversationModel.fromJson(data);
+          }).toList();
+        });
   }
 
-  /// Sends a text message to a conversation.
   Future<void> sendMessage({
     required String conversationId,
     required String senderUid,
@@ -148,7 +145,9 @@ class ChatRepository {
       type: 'text',
       iv: encryptedData['iv'] as String,
       ciphertext: encryptedData['ciphertext'] as String,
-      encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+      encryptedKeys: Map<String, String>.from(
+        encryptedData['encryptedKeys'] as Map,
+      ),
       status: 'sent',
       deletedFor: const [],
       deletedForEveryone: false,
@@ -159,14 +158,18 @@ class ChatRepository {
       type: 'text',
       iv: encryptedData['iv'] as String,
       ciphertext: encryptedData['ciphertext'] as String,
-      encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+      encryptedKeys: Map<String, String>.from(
+        encryptedData['encryptedKeys'] as Map,
+      ),
       status: 'sent',
     );
 
     final batch = _firestore.batch();
     batch.set(messageDoc, message.toJson());
 
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     batch.update(conversationRef, {
       'lastMessageAt': FieldValue.serverTimestamp(),
       'lastMessagePreview': lastMessagePreview.toJson(),
@@ -181,26 +184,21 @@ class ChatRepository {
         inviteeIDs: [recipientUid],
         customCommand: '{"type": "new_text"}',
       );
-    } catch (_) {
-      // Log failure but do not crash the message send flow
-    }
+    } catch (_) {}
   }
 
-  /// Sends a media message (image/voice/document) to a conversation after encrypting it.
   Future<void> sendMediaMessage({
     required String conversationId,
     required String senderUid,
     required String recipientUid,
-    required String type, // 'image' | 'voice' | 'document'
+    required String type,
     required String localFilePath,
     required String senderPubKeyPEM,
     required String recipientPubKeyPEM,
     int? durationMs,
   }) async {
-    // 1. Get bytes from MediaService
     final mediaBytes = await _mediaService.getMediaBytes(localFilePath);
 
-    // 2. Encrypt the raw bytes and generate AES key and RSA-OAEP encrypted keys
     final encryptionData = _encryptionService.encryptMediaBytes(
       rawBytes: mediaBytes,
       recipientUid: recipientUid,
@@ -212,9 +210,10 @@ class ChatRepository {
     final encryptedBytes = encryptionData['encryptedBytes'] as Uint8List;
     final mediaIv = encryptionData['iv'] as String;
     final aesKey = encryptionData['aesKey'] as Uint8List;
-    final encryptedKeys = Map<String, String>.from(encryptionData['encryptedKeys'] as Map);
+    final encryptedKeys = Map<String, String>.from(
+      encryptionData['encryptedKeys'] as Map,
+    );
 
-    // 3. Generate message doc and ID
     final messagesRef = _firestore
         .collection('conversations')
         .doc(conversationId)
@@ -225,23 +224,19 @@ class ChatRepository {
     final filename = localFilePath.split('/').last.split('\\').last;
     final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-    // Write the ciphertext to a temporary file locally
     final tempDir = await getTemporaryDirectory();
     final tempFile = File('${tempDir.path}/${timestamp}_$filename.enc');
     await tempFile.writeAsBytes(encryptedBytes);
 
-    // 4. Upload the ENCRYPTED temporary file to Cloudinary
     final String? mediaUrl = await _mediaService.uploadToCloudinary(tempFile);
     if (mediaUrl == null) {
       throw Exception('Failed to upload media to Cloudinary');
     }
 
-    // Clean up local temporary encrypted file
     try {
       await tempFile.delete();
     } catch (_) {}
 
-    // 5. Encrypt placeholder text so decryption in stream does not fail
     String placeholderText;
     if (type == 'image') {
       placeholderText = 'Sent an image 📷';
@@ -261,7 +256,6 @@ class ChatRepository {
     final textCiphertext = textEncryptionData['ciphertext'] as String;
     final textIv = textEncryptionData['iv'] as String;
 
-    // 6. Save the message to Firestore
     final now = DateTime.now();
     final message = MessageModel(
       messageId: messageId,
@@ -279,8 +273,8 @@ class ChatRepository {
       mediaMimeType: type == 'image'
           ? 'image/jpeg'
           : (type == 'voice'
-              ? 'audio/aac'
-              : (type == 'video' ? 'video/mp4' : 'application/octet-stream')),
+                ? 'audio/aac'
+                : (type == 'video' ? 'video/mp4' : 'application/octet-stream')),
       mediaOriginalFilename: filename,
       durationMs: durationMs,
       deletedFor: const [],
@@ -297,13 +291,15 @@ class ChatRepository {
     );
 
     final batch = _firestore.batch();
-    // Save MessageModel to json, ensuring both type and messageType are stored
+
     final messageJson = message.toJson();
     messageJson['messageType'] = type;
 
     batch.set(messageDoc, messageJson);
 
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     batch.update(conversationRef, {
       'lastMessageAt': FieldValue.serverTimestamp(),
       'lastMessagePreview': lastMessagePreview.toJson(),
@@ -313,7 +309,6 @@ class ChatRepository {
     await batch.commit();
   }
 
-  /// Decrypts a message ciphertext using the shared/injected encryption service.
   String decryptMessage({
     required String ciphertext,
     required String iv,
@@ -326,7 +321,6 @@ class ChatRepository {
     );
   }
 
-  /// Decrypts encrypted media bytes using the shared/injected encryption service.
   Uint8List decryptMediaBytes({
     required Uint8List encryptedBytes,
     required String iv,
@@ -339,8 +333,10 @@ class ChatRepository {
     );
   }
 
-  /// Real-time stream of messages in a conversation, decrypted on the fly and filtered by blocked users.
-  Stream<List<MessageModel>> getMessagesStream(String conversationId, String myUid) {
+  Stream<List<MessageModel>> getMessagesStream(
+    String conversationId,
+    String myUid,
+  ) {
     final controller = StreamController<List<MessageModel>>();
     List<String> blockedUids = [];
     List<MessageModel> currentMessages = [];
@@ -363,75 +359,85 @@ class ChatRepository {
         .doc(myUid)
         .collection('blocked_users')
         .snapshots()
-        .listen((snapshot) {
-      blockedUids = snapshot.docs.map((doc) => doc.id).toList();
-      emitFiltered();
-    }, onError: (err) {
-      if (!controller.isClosed) controller.addError(err);
-    });
+        .listen(
+          (snapshot) {
+            blockedUids = snapshot.docs.map((doc) => doc.id).toList();
+            emitFiltered();
+          },
+          onError: (err) {
+            if (!controller.isClosed) controller.addError(err);
+          },
+        );
 
     messagesSub = _firestore
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
         .snapshots()
-        .listen((snapshot) {
-      final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(snapshot.docs);
-      final now = DateTime.now();
-
-      DateTime parseTimestamp(dynamic val) {
-        if (val == null) return now;
-        if (val is Timestamp) return val.toDate();
-        if (val is String) return DateTime.tryParse(val) ?? now;
-        if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
-        return now;
-      }
-
-      docs.sort((a, b) {
-        final aTime = parseTimestamp(a.data()['timestamp']);
-        final bTime = parseTimestamp(b.data()['timestamp']);
-        return bTime.compareTo(aTime); // Descending (most recent first)
-      });
-
-      currentMessages = docs.map((doc) {
-        final data = doc.data();
-        var msg = MessageModel.fromJson(data);
-
-        if (msg.type == 'call_log') {
-          msg = msg.copyWith(
-            plaintext: () => null,
-            hasDecryptionError: false,
-          );
-        } else if (msg.deletedForEveryone || msg.isDeleted || data['isDeleted'] == true) {
-          msg = msg.copyWith(
-            plaintext: () => '🚫 This message was deleted.',
-            isDeleted: true,
-          );
-        } else {
-          try {
-            final plaintext = _encryptionService.decryptMessage(
-              ciphertextBase64: msg.ciphertext,
-              ivBase64: msg.iv,
-              encryptedSessionKeyBase64: msg.encryptedKeys[myUid] ?? '',
+        .listen(
+          (snapshot) {
+            final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(
+              snapshot.docs,
             );
-            msg = msg.copyWith(
-              plaintext: () => plaintext,
-              hasDecryptionError: plaintext == '[DECRYPTION_FAILED]',
-            );
-          } catch (e) {
-            msg = msg.copyWith(
-              plaintext: () => 'Error decrypting message',
-              hasDecryptionError: true,
-            );
-          }
-        }
+            final now = DateTime.now();
 
-        return msg;
-      }).toList();
-      emitFiltered();
-    }, onError: (err) {
-      if (!controller.isClosed) controller.addError(err);
-    });
+            DateTime parseTimestamp(dynamic val) {
+              if (val == null) return now;
+              if (val is Timestamp) return val.toDate();
+              if (val is String) return DateTime.tryParse(val) ?? now;
+              if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+              return now;
+            }
+
+            docs.sort((a, b) {
+              final aTime = parseTimestamp(a.data()['timestamp']);
+              final bTime = parseTimestamp(b.data()['timestamp']);
+              return bTime.compareTo(aTime);
+            });
+
+            currentMessages = docs.map((doc) {
+              final data = doc.data();
+              var msg = MessageModel.fromJson(data);
+
+              if (msg.type == 'call_log') {
+                msg = msg.copyWith(
+                  plaintext: () => null,
+                  hasDecryptionError: false,
+                );
+              } else if (msg.deletedForEveryone ||
+                  msg.isDeleted ||
+                  data['isDeleted'] == true) {
+                msg = msg.copyWith(
+                  plaintext: () => '🚫 This message was deleted.',
+                  isDeleted: true,
+                );
+              } else {
+                try {
+                  final plaintext = _encryptionService.decryptMessage(
+                    ciphertextBase64: msg.ciphertext,
+                    ivBase64: msg.iv,
+                    encryptedSessionKeyBase64: msg.encryptedKeys[myUid] ?? '',
+                  );
+                  msg = msg.copyWith(
+                    plaintext: () => plaintext,
+                    hasDecryptionError: plaintext == '[DECRYPTION_FAILED]',
+                  );
+                } catch (e) {
+                  msg = msg.copyWith(
+                    plaintext: () => 'Error decrypting message',
+                    hasDecryptionError: true,
+                  );
+                }
+              }
+
+              return msg;
+            }).toList();
+            emitFiltered();
+          },
+          onError: (err) {
+            if (!controller.isClosed) controller.addError(err);
+          },
+        );
 
     controller.onCancel = () {
       blockedSub?.cancel();
@@ -441,7 +447,6 @@ class ChatRepository {
     return controller.stream;
   }
 
-  /// Real-time stream of a user's profile from Firestore, hiding presence details if they are blocked.
   Stream<UserModel?> getUserStream(String uid, String myUid) {
     final controller = StreamController<UserModel?>();
     UserModel? currentUser;
@@ -454,11 +459,13 @@ class ChatRepository {
       if (controller.isClosed) return;
       if (isBlocked) {
         if (currentUser != null) {
-          controller.add(currentUser!.copyWith(
-            onlineStatus: 'offline',
-            isOnline: false,
-            lastSeen: DateTime.fromMillisecondsSinceEpoch(0),
-          ));
+          controller.add(
+            currentUser!.copyWith(
+              onlineStatus: 'offline',
+              isOnline: false,
+              lastSeen: DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          );
         } else {
           controller.add(null);
         }
@@ -473,27 +480,33 @@ class ChatRepository {
         .collection('blocked_users')
         .doc(uid)
         .snapshots()
-        .listen((snapshot) {
-      isBlocked = snapshot.exists;
-      emitFiltered();
-    }, onError: (err) {
-      if (!controller.isClosed) controller.addError(err);
-    });
+        .listen(
+          (snapshot) {
+            isBlocked = snapshot.exists;
+            emitFiltered();
+          },
+          onError: (err) {
+            if (!controller.isClosed) controller.addError(err);
+          },
+        );
 
     userSub = _firestore
         .collection('users')
         .doc(uid)
         .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists && snapshot.data() != null) {
-        currentUser = UserModel.fromJson(snapshot.data()!);
-      } else {
-        currentUser = null;
-      }
-      emitFiltered();
-    }, onError: (err) {
-      if (!controller.isClosed) controller.addError(err);
-    });
+        .listen(
+          (snapshot) {
+            if (snapshot.exists && snapshot.data() != null) {
+              currentUser = UserModel.fromJson(snapshot.data()!);
+            } else {
+              currentUser = null;
+            }
+            emitFiltered();
+          },
+          onError: (err) {
+            if (!controller.isClosed) controller.addError(err);
+          },
+        );
 
     controller.onCancel = () {
       userSub?.cancel();
@@ -503,21 +516,18 @@ class ChatRepository {
     return controller.stream;
   }
 
-  /// Updates a message's status to 'read' (or 'delivered') in Firestore.
   Future<void> updateMessageStatus({
     required String conversationId,
     required String messageId,
     required String status,
   }) async {
-    final Map<String, dynamic> updates = {
-      'status': status,
-    };
+    final Map<String, dynamic> updates = {'status': status};
     if (status == 'read') {
       updates['readAt'] = FieldValue.serverTimestamp();
     } else if (status == 'delivered') {
       updates['deliveredAt'] = FieldValue.serverTimestamp();
     }
-    
+
     await _firestore
         .collection('conversations')
         .doc(conversationId)
@@ -525,15 +535,11 @@ class ChatRepository {
         .doc(messageId)
         .update(updates);
 
-    await _firestore
-        .collection('conversations')
-        .doc(conversationId)
-        .update({
+    await _firestore.collection('conversations').doc(conversationId).update({
       'lastMessagePreview.status': status,
     });
   }
 
-  /// Marks all unread incoming messages in a conversation as read.
   Future<void> markMessagesAsRead({
     required String conversationId,
     required String myUid,
@@ -560,9 +566,7 @@ class ChatRepository {
 
     if (hasUpdates) {
       await batch.commit();
-      
-      // Also update the unread count in conversation document to 0 for current user
-      // and update the lastMessagePreview status to 'read'
+
       await _firestore.collection('conversations').doc(conversationId).update({
         'unreadCount.$myUid': 0,
         'lastMessagePreview.status': 'read',
@@ -570,21 +574,15 @@ class ChatRepository {
     }
   }
 
-  /// Blocks a user by creating a document in users/{myUid}/blocked_users/{otherUid}.
   Future<void> blockUser(String myUid, String otherUid) async {
     await _firestore
         .collection('users')
         .doc(myUid)
         .collection('blocked_users')
         .doc(otherUid)
-        .set({
-      'blockedAt': FieldValue.serverTimestamp(),
-    });
-
-    // Optional: Add to recipient's blocked list for symmetry or handle unidirectionally
+        .set({'blockedAt': FieldValue.serverTimestamp()});
   }
 
-  /// Voluntarily reports a conversation using E2EE blind metadata (only handshakes and comments).
   Future<void> reportConversation({
     required String conversationId,
     required String reporterUid,
@@ -601,7 +599,6 @@ class ChatRepository {
     });
   }
 
-  /// Soft deletes a message for the current user locally.
   Future<void> deleteMessageForMe({
     required String conversationId,
     required String messageId,
@@ -613,11 +610,10 @@ class ChatRepository {
         .collection('messages')
         .doc(messageId)
         .update({
-      'deletedFor': FieldValue.arrayUnion([myUid]),
-    });
+          'deletedFor': FieldValue.arrayUnion([myUid]),
+        });
   }
 
-  /// Soft deletes a message for everyone.
   Future<void> deleteMessageForEveryone({
     required String conversationId,
     required String messageId,
@@ -628,24 +624,22 @@ class ChatRepository {
         .collection('messages')
         .doc(messageId)
         .update({
-      'deletedForEveryone': true,
-      'isDeleted': true,
-      'ciphertext': '',
-      'mediaUrl': FieldValue.delete(),
-      'deletedForEveryoneAt': FieldValue.serverTimestamp(),
-    });
+          'deletedForEveryone': true,
+          'isDeleted': true,
+          'ciphertext': '',
+          'mediaUrl': FieldValue.delete(),
+          'deletedForEveryoneAt': FieldValue.serverTimestamp(),
+        });
   }
 
-  /// Writes a call log entry to both the conversation's messages and a root-level call_logs collection.
   Future<void> logCall({
     required String callId,
     required String callerId,
     required String receiverId,
-    required String status, // 'missed' | 'declined' | 'completed'
+    required String status,
   }) async {
     final conversationId = generateConversationId(callerId, receiverId);
 
-    // Ensure the conversation document exists in Firestore
     await createConversation(
       conversationId: conversationId,
       participantUids: [callerId, receiverId],
@@ -676,8 +670,9 @@ class ChatRepository {
     final batch = _firestore.batch();
     batch.set(messageDoc, callLogDoc, SetOptions(merge: true));
 
-    // Update conversation last message details
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     final updateData = <String, dynamic>{
       'lastMessageAt': FieldValue.serverTimestamp(),
       'lastMessagePreview': {
@@ -694,7 +689,6 @@ class ChatRepository {
     }
     batch.update(conversationRef, updateData);
 
-    // Write to root-level call_logs collection
     final callLogRef = _firestore.collection('call_logs').doc(callId);
     batch.set(callLogRef, {
       'type': 'call_log',

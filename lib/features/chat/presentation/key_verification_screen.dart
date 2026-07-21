@@ -96,7 +96,10 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Encryption Keys', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Encryption Keys',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
@@ -109,9 +112,7 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
   Widget _buildBody(Color onSurface) {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: VybinTheme.neonHighlight,
-        ),
+        child: CircularProgressIndicator(color: VybinTheme.neonHighlight),
       );
     }
 
@@ -122,7 +123,11 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: VybinTheme.errorColor, size: 60),
+              const Icon(
+                Icons.error_outline,
+                color: VybinTheme.errorColor,
+                size: 60,
+              ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
@@ -141,7 +146,6 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Shield & Verification Title
             const Center(
               child: Icon(
                 Icons.verified_user,
@@ -171,7 +175,6 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Fingerprint grid for you
             _buildFingerprintCard(
               title: 'Your Fingerprint',
               subtitle: _currentUser!.displayName,
@@ -179,7 +182,6 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Fingerprint grid for contact
             _buildFingerprintCard(
               title: '${widget.contactName}\'s Fingerprint',
               subtitle: '@${_recipientUser!.username}',
@@ -187,7 +189,6 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Informational Box
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -289,7 +290,6 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
               ),
               const SizedBox(height: 20),
 
-              // scannable visual grid of hash blocks
               LayoutBuilder(
                 builder: (context, constraints) {
                   return Wrap(
@@ -297,7 +297,10 @@ class _KeyVerificationScreenState extends State<KeyVerificationScreen> {
                     runSpacing: 12,
                     children: blocks.map((block) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: VybinTheme.darkCharcoal,
                           borderRadius: BorderRadius.circular(8),

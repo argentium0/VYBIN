@@ -72,7 +72,6 @@ class NotificationService {
       final sorted = [senderUid, myUid]..sort();
       conversationId = sorted.join('_');
 
-      // Update message status to 'delivered' in Firestore if currently 'sent' (non-decrypting operation)
       try {
         final docRef = FirebaseFirestore.instance
             .collection('conversations')
@@ -95,7 +94,6 @@ class NotificationService {
       }
     }
 
-    // Show generic, privacy-respecting notification
     await showNotification(
       id: messageId.hashCode,
       title: 'VYBIN',
@@ -118,7 +116,6 @@ class NotificationService {
 
 @pragma('vm:entry-point')
 Future<void> anonymizedBackgroundMessageHandler(RemoteMessage message) async {
-  // Ensure Firebase is initialized in the background isolate
   await Firebase.initializeApp();
   await NotificationService.initialize();
   await NotificationService.decryptAndShowLocalNotification(message);

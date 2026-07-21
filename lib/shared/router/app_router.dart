@@ -24,15 +24,14 @@ import 'package:vybin/features/settings/presentation/notification_settings_scree
 import 'package:vybin/features/chat/presentation/key_verification_screen.dart';
 import 'package:vybin/features/chat/presentation/contact_profile_screen.dart';
 
-/// Helper to convert BLoC stream updates into a [Listenable] for [GoRouter].
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
 
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();
     _subscription = stream.asBroadcastStream().listen(
-          (dynamic _) => notifyListeners(),
-        );
+      (dynamic _) => notifyListeners(),
+    );
   }
 
   @override
@@ -50,58 +49,62 @@ class AppRouter {
       navigatorKey: navigatorKey,
       initialLocation: '/',
       refreshListenable: GoRouterRefreshStream(
-        authBloc.stream.where((state) =>
-            state is AuthAuthenticated ||
-            state is AuthUnauthenticated ||
-            state is AuthEmailUnverified ||
-            state is AuthRequiresIdentityImport ||
-            state is AuthNeedsMigrationState ||
-            state is AuthLoggedOutState),
+        authBloc.stream.where(
+          (state) =>
+              state is AuthAuthenticated ||
+              state is AuthUnauthenticated ||
+              state is AuthEmailUnverified ||
+              state is AuthRequiresIdentityImport ||
+              state is AuthNeedsMigrationState ||
+              state is AuthLoggedOutState,
+        ),
       ),
       redirect: (context, state) {
         final authState = authBloc.state;
 
-        final isLoggingIn = state.matchedLocation == '/login' ||
+        final isLoggingIn =
+            state.matchedLocation == '/login' ||
             state.matchedLocation == '/signup' ||
             state.matchedLocation == '/forgot-password';
         final isSplash = state.matchedLocation == '/';
         final isVerifyEmail = state.matchedLocation == '/verify-email';
 
         if (authState is AuthInitial) {
-          // If initializing, keep user on splash screen
           return isSplash ? null : '/';
         }
 
-        if (authState is AuthUnauthenticated || authState is AuthLoggedOutState) {
-          // If not logged in or forced logged out, redirect to login unless already on auth screens
+        if (authState is AuthUnauthenticated ||
+            authState is AuthLoggedOutState) {
           return isLoggingIn ? null : '/login';
         }
 
         if (authState is AuthEmailUnverified) {
-          // If email is unverified, redirect to verify-email unless on signup (for key dialog)
           if (state.matchedLocation == '/signup') {
             return null;
           }
           return isVerifyEmail ? null : '/verify-email';
         }
 
-        if (authState is AuthRequiresIdentityImport || authState is AuthNeedsMigrationState) {
-          return state.matchedLocation == '/identity-import' ? null : '/identity-import';
+        if (authState is AuthRequiresIdentityImport ||
+            authState is AuthNeedsMigrationState) {
+          return state.matchedLocation == '/identity-import'
+              ? null
+              : '/identity-import';
         }
 
         if (authState is AuthAuthenticated) {
-          // If logged in, redirect to dashboard if on auth/splash screens, verify-email, or identity-import
-          final isAuthSplashOrImport = isLoggingIn || isSplash || isVerifyEmail || state.matchedLocation == '/identity-import';
+          final isAuthSplashOrImport =
+              isLoggingIn ||
+              isSplash ||
+              isVerifyEmail ||
+              state.matchedLocation == '/identity-import';
           return isAuthSplashOrImport ? '/chats' : null;
         }
 
         return null;
       },
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const SplashScreen(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
         GoRoute(
           path: '/login',
           builder: (context, state) => const LoginScreen(),
@@ -126,7 +129,9 @@ class AppRouter {
           path: '/chats',
           builder: (context, state) {
             final authState = context.read<AuthBloc>().state;
-            final currentUid = authState is AuthAuthenticated ? authState.user.uid : 'my_uid_123';
+            final currentUid = authState is AuthAuthenticated
+                ? authState.user.uid
+                : 'my_uid_123';
             final chatRepository = context.read<ChatRepository>();
             return BlocProvider(
               create: (context) => ChatListBloc(
@@ -164,7 +169,8 @@ class AppRouter {
           path: '/chat/contact-profile/:userId',
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
-            final conversationId = state.uri.queryParameters['conversationId'] ?? '';
+            final conversationId =
+                state.uri.queryParameters['conversationId'] ?? '';
             return ContactProfileScreen(
               userId: userId,
               conversationId: conversationId,

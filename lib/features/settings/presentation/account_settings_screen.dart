@@ -21,9 +21,7 @@ class AccountSettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Account'),
-      ),
+      appBar: AppBar(title: const Text('Account')),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthUnauthenticated) {
@@ -31,7 +29,9 @@ class AccountSettingsScreen extends StatelessWidget {
           } else if (state is AuthPasswordChangeSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Password successfully changed and cryptographic vault re-encrypted! 🔑'),
+                content: Text(
+                  'Password successfully changed and cryptographic vault re-encrypted! 🔑',
+                ),
                 backgroundColor: VybinTheme.whatsappGreen,
               ),
             );
@@ -61,11 +61,20 @@ class AccountSettingsScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   children: [
                     ListTile(
-                      leading: Icon(Icons.lock_reset_outlined, color: theme.iconTheme.color),
-                      title: Text('Change Password', style: TextStyle(color: onSurface)),
+                      leading: Icon(
+                        Icons.lock_reset_outlined,
+                        color: theme.iconTheme.color,
+                      ),
+                      title: Text(
+                        'Change Password',
+                        style: TextStyle(color: onSurface),
+                      ),
                       subtitle: const Text(
                         'Change your password and re-encrypt E2EE keys',
-                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                        style: TextStyle(
+                          color: VybinTheme.secondaryText,
+                          fontSize: 12,
+                        ),
                       ),
                       onTap: () {
                         if (email.isEmpty) return;
@@ -81,21 +90,42 @@ class AccountSettingsScreen extends StatelessWidget {
                     ),
                     const Divider(),
                     ListTile(
-                      leading: Icon(Icons.lock_outline, color: theme.iconTheme.color),
-                      title: Text('Export Cryptographic Identity', style: TextStyle(color: onSurface)),
+                      leading: Icon(
+                        Icons.lock_outline,
+                        color: theme.iconTheme.color,
+                      ),
+                      title: Text(
+                        'Export Cryptographic Identity',
+                        style: TextStyle(color: onSurface),
+                      ),
                       subtitle: const Text(
                         'Export secure E2EE keys for device migration',
-                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                        style: TextStyle(
+                          color: VybinTheme.secondaryText,
+                          fontSize: 12,
+                        ),
                       ),
                       onTap: () => _handleExportIdentity(context),
                     ),
                     const Divider(),
                     ListTile(
-                      leading: const Icon(Icons.delete_forever_outlined, color: VybinTheme.errorColor),
-                      title: const Text('Delete Account', style: TextStyle(color: VybinTheme.errorColor, fontWeight: FontWeight.bold)),
+                      leading: const Icon(
+                        Icons.delete_forever_outlined,
+                        color: VybinTheme.errorColor,
+                      ),
+                      title: const Text(
+                        'Delete Account',
+                        style: TextStyle(
+                          color: VybinTheme.errorColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       subtitle: const Text(
                         'Erase user data and permanently delete profile',
-                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                        style: TextStyle(
+                          color: VybinTheme.secondaryText,
+                          fontSize: 12,
+                        ),
                       ),
                       onTap: () => _showDeleteConfirmation(context),
                     ),
@@ -106,7 +136,10 @@ class AccountSettingsScreen extends StatelessWidget {
                         color: Colors.red.withValues(alpha: 0.05),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: VybinTheme.errorColor, width: 1),
+                          side: const BorderSide(
+                            color: VybinTheme.errorColor,
+                            width: 1,
+                          ),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -115,7 +148,10 @@ class AccountSettingsScreen extends StatelessWidget {
                             children: [
                               const Row(
                                 children: [
-                                  Icon(Icons.warning_amber_rounded, color: VybinTheme.errorColor),
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: VybinTheme.errorColor,
+                                  ),
                                   SizedBox(width: 8),
                                   Text(
                                     'DANGER ZONE',
@@ -143,15 +179,20 @@ class AccountSettingsScreen extends StatelessWidget {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: VybinTheme.errorColor,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  onPressed: () => _showPurgeConfirmationDialog(context),
+                                  onPressed: () =>
+                                      _showPurgeConfirmationDialog(context),
                                   child: const Text(
                                     'Purge Secure Local Environment',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -175,7 +216,10 @@ class AccountSettingsScreen extends StatelessWidget {
           backgroundColor: VybinTheme.cardCharcoal,
           title: const Text(
             'Delete Account?',
-            style: TextStyle(color: VybinTheme.errorColor, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: VybinTheme.errorColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: const Text(
             'Are you sure you want to permanently delete your account? This will erase all your messages, profile details, and private keys. This action cannot be undone.\n\nNote: If you logged in a long time ago, you may need to re-authenticate first.',
@@ -184,15 +228,26 @@ class AccountSettingsScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: VybinTheme.secondaryText),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: VybinTheme.errorColor),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: VybinTheme.errorColor,
+              ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 context.read<AuthBloc>().add(DeleteAccountRequested());
               },
-              child: const Text('DELETE ACCOUNT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'DELETE ACCOUNT',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -208,7 +263,10 @@ class AccountSettingsScreen extends StatelessWidget {
           backgroundColor: VybinTheme.cardCharcoal,
           title: const Text(
             'Confirm Nuclear Purge',
-            style: TextStyle(color: VybinTheme.errorColor, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: VybinTheme.errorColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: const Text(
             'Are you absolutely sure you want to purge the secure local environment? All private keys, local databases, and settings will be permanently destroyed. This cannot be undone.',
@@ -217,25 +275,27 @@ class AccountSettingsScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: VybinTheme.secondaryText),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: VybinTheme.errorColor),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: VybinTheme.errorColor,
+              ),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
 
                 try {
                   final authBloc = context.read<AuthBloc>();
 
-                  // Clear SharedPreferences
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.clear();
 
-                  // Clear FlutterSecureStorage
                   const secureStorage = FlutterSecureStorage();
                   await secureStorage.deleteAll();
 
-                  // Clear cache and app directories
                   final appDir = await getApplicationSupportDirectory();
                   final cacheDir = await getTemporaryDirectory();
                   final docDir = await getApplicationDocumentsDirectory();
@@ -249,7 +309,6 @@ class AccountSettingsScreen extends StatelessWidget {
                     }
                   }
 
-                  // Dispatch logout to auth bloc to trigger UI state reset
                   authBloc.add(const LogoutRequested(eraseDeviceData: true));
 
                   if (context.mounted) {
@@ -271,7 +330,13 @@ class AccountSettingsScreen extends StatelessWidget {
                   }
                 }
               },
-              child: const Text('PURGE EVERYTHING', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'PURGE EVERYTHING',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -343,7 +408,6 @@ class AccountSettingsScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Warning Box
                   Card(
                     color: Colors.amber.withValues(alpha: 0.1),
                     shape: RoundedRectangleBorder(
@@ -357,7 +421,10 @@ class AccountSettingsScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.warning_amber_rounded, color: Colors.amber),
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.amber,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'WARNING',
@@ -424,12 +491,12 @@ class AccountSettingsScreen extends StatelessWidget {
                     icon: const Icon(Icons.copy_all),
                     label: const Text(
                       'Copy to Clipboard',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: encryptedKey));
+                      await Clipboard.setData(
+                        ClipboardData(text: encryptedKey),
+                      );
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setBool('has_exported_identity', true);
                       if (dialogContext.mounted) {
@@ -531,7 +598,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthPasswordChangeSuccess) {
-          Navigator.of(context).pop(); // Close the dialog
+          Navigator.of(context).pop();
         }
       },
       builder: (context, state) {
@@ -568,7 +635,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   children: [
                     const Text(
                       'This updates your Firebase password and re-encrypts your local cryptographic vault keys.',
-                      style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                      style: TextStyle(
+                        color: VybinTheme.secondaryText,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -578,10 +648,15 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                       style: TextStyle(color: onSurface),
                       decoration: InputDecoration(
                         hintText: 'Current Password',
-                        prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureCurrent ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureCurrent
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {
@@ -601,10 +676,15 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                       style: TextStyle(color: onSurface),
                       decoration: InputDecoration(
                         hintText: 'New Password',
-                        prefixIcon: const Icon(Icons.lock_open_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_open_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureNew
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {
@@ -624,10 +704,15 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                       style: TextStyle(color: onSurface),
                       decoration: InputDecoration(
                         hintText: 'Confirm New Password',
-                        prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureConfirm
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {
@@ -641,7 +726,9 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                     ),
                     if (isLoading) ...[
                       const SizedBox(height: 16),
-                      const LinearProgressIndicator(color: VybinTheme.whatsappGreen),
+                      const LinearProgressIndicator(
+                        color: VybinTheme.whatsappGreen,
+                      ),
                     ],
                   ],
                 ),
@@ -650,10 +737,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           ),
           actions: [
             TextButton(
-              onPressed: isLoading
-                  ? null
-                  : () => Navigator.of(context).pop(),
-              child: const Text('Cancel', style: TextStyle(color: VybinTheme.secondaryText)),
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: VybinTheme.secondaryText),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -665,14 +753,17 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   : () {
                       if (_formKey.currentState?.validate() ?? false) {
                         context.read<AuthBloc>().add(
-                              ChangePasswordRequested(
-                                currentPassword: _currentPasswordController.text,
-                                newPassword: _newPasswordController.text,
-                              ),
-                            );
+                          ChangePasswordRequested(
+                            currentPassword: _currentPasswordController.text,
+                            newPassword: _newPasswordController.text,
+                          ),
+                        );
                       }
                     },
-              child: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Change Password',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );

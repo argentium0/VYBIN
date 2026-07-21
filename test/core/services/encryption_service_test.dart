@@ -15,7 +15,6 @@ void main() {
       expect(pair.publicKey, isNotNull);
       expect(pair.privateKey, isNotNull);
 
-      // Ensure it's 2048 bit (modulus bitLength should be around 2048)
       expect(pair.privateKey.modulus!.bitLength, closeTo(2048, 2));
     });
 
@@ -127,7 +126,6 @@ void main() {
         derivedKey,
       );
 
-      // Inject spaces and newlines
       final modifiedEncrypted = ' \n${encrypted.split('').join(' \n')} \n';
 
       final decryptedKey = encryptionService.decryptPrivateKey(

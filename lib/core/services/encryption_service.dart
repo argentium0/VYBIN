@@ -14,13 +14,11 @@ class EncryptionService {
   RSAPrivateKey? get privateKey => _inMemoryPrivateKey;
   RSAPublicKey? get publicKey => _inMemoryPublicKey;
 
-  /// Clears the private key from memory
   void clearPrivateKey() {
     _inMemoryPrivateKey = null;
     _inMemoryPublicKey = null;
   }
 
-  /// Generates an RSA-2048 key pair in an isolate.
   Future<AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>>
   generateKeyPair() async {
     return await Isolate.run(() {
@@ -46,7 +44,6 @@ class EncryptionService {
     _inMemoryPrivateKey = pair.privateKey;
   }
 
-  /// Serializes an RSAPrivateKey into a JSON string.
   String serializePrivateKey(RSAPrivateKey privKey) {
     final Map<String, dynamic> keyData = {
       'n': privKey.modulus?.toRadixString(16),
@@ -57,7 +54,6 @@ class EncryptionService {
     return jsonEncode(keyData);
   }
 
-  /// Deserializes a JSON string into an RSAPrivateKey.
   RSAPrivateKey deserializePrivateKey(String rawJson) {
     final Map<String, dynamic> keyData = jsonDecode(rawJson);
     return RSAPrivateKey(
@@ -68,7 +64,6 @@ class EncryptionService {
     );
   }
 
-  /// Derives a 32-byte AES key from password and uid using PBKDF2.
   Uint8List deriveKeyFromPassword(String password, String uid) {
     final salt = utf8.encode(uid);
     final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
@@ -77,7 +72,6 @@ class EncryptionService {
     return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
   }
 
-  /// Serializes an RSAPrivateKey into a basic string (JSON) and encrypts it using AES-256-GCM.
   String encryptPrivateKey(RSAPrivateKey privKey, Uint8List derivedKey) {
     final Map<String, dynamic> keyData = {
       'n': privKey.modulus?.toRadixString(16),
@@ -88,7 +82,7 @@ class EncryptionService {
     final serializedPem = jsonEncode(keyData);
 
     final secureRandom = _getSecureRandom();
-    final nonce = secureRandom.nextBytes(12); // 96-bit nonce for GCM
+    final nonce = secureRandom.nextBytes(12);
 
     final cipher = GCMBlockCipher(AESEngine())
       ..init(
@@ -106,12 +100,13 @@ class EncryptionService {
     return base64Encode(combined);
   }
 
-  /// Decrypts the AES-256-GCM string back into an RSAPrivateKey.
   RSAPrivateKey decryptPrivateKey(
     String encryptedBase64,
     Uint8List derivedKey,
   ) {
-    final sanitizedBase64 = encryptedBase64.replaceAll(RegExp(r'\s+'), '').trim();
+    final sanitizedBase64 = encryptedBase64
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
     final combined = base64Decode(sanitizedBase64);
 
     final nonce = combined.sublist(0, 12);
@@ -135,7 +130,6 @@ class EncryptionService {
     );
   }
 
-  /// Encodes an [RSAPublicKey] to PKCS#1 PEM string.
   String encodePublicKeyToPem(RSAPublicKey publicKey) {
     final modulus = publicKey.modulus!;
     final exponent = publicKey.exponent!;
@@ -159,7 +153,6 @@ class EncryptionService {
     return '-----BEGIN RSA PUBLIC KEY-----\n${chunks.join('\n')}\n-----END RSA PUBLIC KEY-----';
   }
 
-  /// Decodes a PKCS#1 PEM string back to [RSAPublicKey].
   RSAPublicKey decodePublicKeyFromPem(String pem) {
     final lines = pem.split('\n');
     final base64Lines = lines.where((line) => !line.startsWith('-----')).join();
@@ -192,8 +185,6 @@ class EncryptionService {
     return RSAPublicKey(modulus, exponent);
   }
 
-  /// Encrypts a message using AES-256-GCM and encrypts the AES session key using RSA-OAEP
-  /// for both the recipient and the sender.
   Map<String, dynamic> encryptMessage({
     required String plaintext,
     required String recipientUid,
@@ -213,7 +204,6 @@ class EncryptionService {
     final ciphertextBase64 = base64Encode(ciphertextBytes);
     final ivBase64 = base64Encode(iv);
 
-    // Encrypt AES key for recipient and sender
     final recipientPubKey = decodePublicKeyFromPem(recipientPubKeyPEM);
     final senderPubKey = decodePublicKeyFromPem(senderPubKeyPEM);
 
@@ -235,12 +225,6 @@ class EncryptionService {
     };
   }
 
-  /// Encrypts raw media bytes using a newly generated AES-256 session key.
-  /// Returns a map containing:
-  /// - 'encryptedBytes': Uint8List of encrypted content
-  /// - 'iv': base64 of GCM nonce
-  /// - 'aesKey': Uint8List session key (so we can use it to encrypt other payloads)
-  /// - 'encryptedKeys': Map of uid -> base64(RSA-OAEP encrypted AES key)
   Map<String, dynamic> encryptMediaBytes({
     required Uint8List rawBytes,
     required String recipientUid,
@@ -279,7 +263,6 @@ class EncryptionService {
     };
   }
 
-  /// Decrypts raw media bytes using the session key decrypted with the local private key.
   Uint8List decryptMediaBytes({
     required Uint8List encryptedBytes,
     required String ivBase64,
@@ -298,9 +281,11 @@ class EncryptionService {
 
       final iv = base64Decode(ivBase64);
 
-      final cipher = GCMBlockCipher(
-        AESEngine(),
-      )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
+      final cipher = GCMBlockCipher(AESEngine())
+        ..init(
+          false,
+          AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+        );
 
       return cipher.process(encryptedBytes);
     } catch (_) {
@@ -308,8 +293,6 @@ class EncryptionService {
     }
   }
 
-  /// Encrypts plaintext string using a pre-existing AES session key.
-  /// Returns a map with 'ciphertext' (base64) and 'iv' (base64).
   Map<String, String> encryptPlaintextWithKey({
     required String plaintext,
     required Uint8List aesKey,
@@ -329,7 +312,6 @@ class EncryptionService {
     };
   }
 
-  /// Decrypts a message using the in-memory private key.
   String decryptMessage({
     required String ciphertextBase64,
     required String ivBase64,
@@ -340,20 +322,20 @@ class EncryptionService {
         throw Exception('Private key not loaded in memory.');
       }
 
-      // Decrypt the session key
       final oaep = OAEPEncoding.withSHA256(RSAEngine())
         ..init(false, PrivateKeyParameter<RSAPrivateKey>(_inMemoryPrivateKey!));
 
       final encryptedSessionKey = base64Decode(encryptedSessionKeyBase64);
       final aesKey = oaep.process(encryptedSessionKey);
 
-      // Decrypt the message
       final iv = base64Decode(ivBase64);
       final ciphertextBytes = base64Decode(ciphertextBase64);
 
-      final cipher = GCMBlockCipher(
-        AESEngine(),
-      )..init(false, AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)));
+      final cipher = GCMBlockCipher(AESEngine())
+        ..init(
+          false,
+          AEADParameters(KeyParameter(aesKey), 128, iv, Uint8List(0)),
+        );
 
       final plaintextBytes = cipher.process(ciphertextBytes);
       return utf8.decode(plaintextBytes);

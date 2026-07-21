@@ -26,10 +26,8 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-            IdentityImportSubmitted(
-              identityBlob: _blobController.text.trim(),
-            ),
-          );
+        IdentityImportSubmitted(identityBlob: _blobController.text.trim()),
+      );
     }
   }
 
@@ -107,18 +105,20 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                       state is AuthNeedsMigrationState
                           ? 'New Device Detected'
                           : 'Restore Chat History',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: onSurface,
-                        fontWeight: FontWeight.bold,
-                      ) ?? const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          theme.textTheme.headlineSmall?.copyWith(
+                            color: onSurface,
+                            fontWeight: FontWeight.bold,
+                          ) ??
+                          const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-                    // Zero-Server-Escrow E2EE Warning Card
+
                     Card(
                       color: Colors.amber.withValues(alpha: 0.05),
                       shape: RoundedRectangleBorder(
@@ -132,7 +132,10 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.amber),
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.amber,
+                                ),
                                 SizedBox(width: 8),
                                 Text(
                                   'ZERO-SERVER-ESCROW ARCHITECTURE',
@@ -158,7 +161,7 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Monospace text area instruction
+
                     Text(
                       state is AuthNeedsMigrationState
                           ? 'New Device Detected. Please paste your secure migration blob to unlock your account.'
@@ -170,7 +173,7 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Encrypted Key Input Block
+
                     TextFormField(
                       controller: _blobController,
                       obscureText: _obscureBlob,
@@ -187,15 +190,21 @@ class _IdentityImportScreenState extends State<IdentityImportScreen> {
                         filled: true,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: VybinTheme.dividerCharcoal),
+                          borderSide: const BorderSide(
+                            color: VybinTheme.dividerCharcoal,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: VybinTheme.whatsappTeal),
+                          borderSide: const BorderSide(
+                            color: VybinTheme.whatsappTeal,
+                          ),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureBlob ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureBlob
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: Colors.white70,
                           ),
                           onPressed: () {

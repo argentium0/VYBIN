@@ -17,9 +17,7 @@ class SettingsScreen extends StatelessWidget {
     final onSurface = theme.colorScheme.onSurface;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           final currentUser = state is AuthAuthenticated ? state.user : null;
@@ -28,7 +26,6 @@ class SettingsScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 16),
               children: [
-                // User Profile Header summary
                 if (currentUser != null) ...[
                   ListTile(
                     leading: CircleAvatar(
@@ -53,15 +50,20 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     subtitle: const Text(
                       'Profile details, E2EE key status',
-                      style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                      style: TextStyle(
+                        color: VybinTheme.secondaryText,
+                        fontSize: 12,
+                      ),
                     ),
-                    trailing: const Icon(Icons.chevron_right, color: VybinTheme.whatsappGreen),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: VybinTheme.whatsappGreen,
+                    ),
                     onTap: () => context.push('/profile'),
                   ),
                   const Divider(height: 32),
                 ],
 
-                // Cryptographic key PEM section (Spec 9.8 / 9.7)
                 if (currentUser != null) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -124,19 +126,23 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
 
-                // Account: Privacy, Security, Change Password (stubs)
                 ListTile(
-                  leading: Icon(Icons.lock_outline, color: theme.iconTheme.color),
+                  leading: Icon(
+                    Icons.lock_outline,
+                    color: theme.iconTheme.color,
+                  ),
                   title: Text('Account', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'Privacy, security, change password',
-                    style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                    style: TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () => context.push('/settings/account'),
                 ),
                 const Divider(),
 
-                // Activity Status Toggle
                 ValueListenableBuilder<bool>(
                   valueListenable: VybinApp.showActivityStatusNotifier,
                   builder: (context, showStatus, _) {
@@ -145,10 +151,16 @@ class SettingsScreen extends StatelessWidget {
                         Icons.visibility_outlined,
                         color: theme.iconTheme.color,
                       ),
-                      title: Text('Activity Status', style: TextStyle(color: onSurface)),
+                      title: Text(
+                        'Activity Status',
+                        style: TextStyle(color: onSurface),
+                      ),
                       subtitle: const Text(
                         'Show when you are active. If off, you won\'t see others\' activity status.',
-                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                        style: TextStyle(
+                          color: VybinTheme.secondaryText,
+                          fontSize: 12,
+                        ),
                       ),
                       value: showStatus,
                       activeThumbColor: VybinTheme.whatsappGreen,
@@ -162,81 +174,126 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const Divider(),
 
-                // Chats: Theme (light/dark switch), Chat Backup (stub)
                 ValueListenableBuilder<ThemeMode>(
                   valueListenable: VybinApp.themeNotifier,
                   builder: (context, currentMode, _) {
                     return SwitchListTile(
                       secondary: Icon(
-                        currentMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                        currentMode == ThemeMode.dark
+                            ? Icons.dark_mode
+                            : Icons.light_mode,
                         color: theme.iconTheme.color,
                       ),
-                      title: Text('Dark Mode', style: TextStyle(color: onSurface)),
+                      title: Text(
+                        'Dark Mode',
+                        style: TextStyle(color: onSurface),
+                      ),
                       subtitle: const Text(
                         'Toggle application visual theme',
-                        style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                        style: TextStyle(
+                          color: VybinTheme.secondaryText,
+                          fontSize: 12,
+                        ),
                       ),
                       value: currentMode == ThemeMode.dark,
                       activeThumbColor: VybinTheme.whatsappGreen,
                       onChanged: (bool value) {
-                        VybinApp.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                        VybinApp.themeNotifier.value = value
+                            ? ThemeMode.dark
+                            : ThemeMode.light;
                       },
                     );
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.backup_outlined, color: theme.iconTheme.color),
-                  title: Text('Chat Backup', style: TextStyle(color: onSurface)),
+                  leading: Icon(
+                    Icons.backup_outlined,
+                    color: theme.iconTheme.color,
+                  ),
+                  title: Text(
+                    'Chat Backup',
+                    style: TextStyle(color: onSurface),
+                  ),
                   subtitle: const Text(
                     'Local backup configurations (Stub)',
-                    style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                    style: TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chat backup is stored securely in on-device hardware Keystore.')),
+                      const SnackBar(
+                        content: Text(
+                          'Chat backup is stored securely in on-device hardware Keystore.',
+                        ),
+                      ),
                     );
                   },
                 ),
                 const Divider(),
 
-                // Notifications settings
                 ListTile(
-                  leading: Icon(Icons.notifications_none_outlined, color: theme.iconTheme.color),
-                  title: Text('Notifications', style: TextStyle(color: onSurface)),
+                  leading: Icon(
+                    Icons.notifications_none_outlined,
+                    color: theme.iconTheme.color,
+                  ),
+                  title: Text(
+                    'Notifications',
+                    style: TextStyle(color: onSurface),
+                  ),
                   subtitle: const Text(
                     'Tones, vibration, popup preview controls',
-                    style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                    style: TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () => context.push('/settings/notifications'),
                 ),
                 const Divider(),
 
-                // Help and licenses
                 ListTile(
-                  leading: Icon(Icons.help_outline_outlined, color: theme.iconTheme.color),
+                  leading: Icon(
+                    Icons.help_outline_outlined,
+                    color: theme.iconTheme.color,
+                  ),
                   title: Text('Help', style: TextStyle(color: onSurface)),
                   subtitle: const Text(
                     'FAQ, contact support, licenses',
-                    style: TextStyle(color: VybinTheme.secondaryText, fontSize: 12),
+                    style: TextStyle(
+                      color: VybinTheme.secondaryText,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () {
                     showAboutDialog(
                       context: context,
                       applicationName: 'VYBIN',
                       applicationVersion: '1.0.0 (MVP)',
-                      applicationIcon: const Icon(Icons.security, color: VybinTheme.whatsappGreen, size: 40),
-                      applicationLegalese: '© 2026 VYBIN Privacy-First Messaging.',
+                      applicationIcon: const Icon(
+                        Icons.security,
+                        color: VybinTheme.whatsappGreen,
+                        size: 40,
+                      ),
+                      applicationLegalese:
+                          '© 2026 VYBIN Privacy-First Messaging.',
                     );
                   },
                 ),
                 const Divider(),
 
-                // Log Out Option
                 ListTile(
-                  leading: const Icon(Icons.logout, color: VybinTheme.errorColor),
+                  leading: const Icon(
+                    Icons.logout,
+                    color: VybinTheme.errorColor,
+                  ),
                   title: const Text(
                     'Log Out',
-                    style: TextStyle(color: VybinTheme.errorColor, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: VybinTheme.errorColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   onTap: () {
                     context.read<AuthBloc>().add(LogoutRequested());

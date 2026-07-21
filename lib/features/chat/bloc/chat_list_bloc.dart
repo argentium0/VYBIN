@@ -14,9 +14,9 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
   ChatListBloc({
     required ChatRepository chatRepository,
     required String currentUid,
-  })  : _chatRepository = chatRepository,
-        _currentUid = currentUid,
-        super(ChatListInitial()) {
+  }) : _chatRepository = chatRepository,
+       _currentUid = currentUid,
+       super(ChatListInitial()) {
     on<LoadConversations>(_onLoadConversations);
     on<UpdateConversations>(_onUpdateConversations);
   }
@@ -30,29 +30,32 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
     await _conversationsSubscription?.cancel();
     _conversationsSubscription = _chatRepository
         .getConversationsStream(_currentUid)
-        .listen((conversations) async {
-      final participants = <String, UserModel>{};
-      for (final conv in conversations) {
-        final otherUid = conv.participantUids.firstWhere(
-          (uid) => uid != _currentUid,
-          orElse: () => '',
-        );
-        if (otherUid.isNotEmpty && !participants.containsKey(otherUid)) {
-          final user = await _chatRepository.getUserById(otherUid);
-          if (user != null) {
-            participants[otherUid] = user;
-          }
-        }
-      }
+        .listen(
+          (conversations) async {
+            final participants = <String, UserModel>{};
+            for (final conv in conversations) {
+              final otherUid = conv.participantUids.firstWhere(
+                (uid) => uid != _currentUid,
+                orElse: () => '',
+              );
+              if (otherUid.isNotEmpty && !participants.containsKey(otherUid)) {
+                final user = await _chatRepository.getUserById(otherUid);
+                if (user != null) {
+                  participants[otherUid] = user;
+                }
+              }
+            }
 
-      if (!isClosed) {
-        add(UpdateConversations(conversations, participants));
-      }
-    }, onError: (Object error) {
-      if (!isClosed) {
-        emit(ChatListError(error.toString()));
-      }
-    });
+            if (!isClosed) {
+              add(UpdateConversations(conversations, participants));
+            }
+          },
+          onError: (Object error) {
+            if (!isClosed) {
+              emit(ChatListError(error.toString()));
+            }
+          },
+        );
   }
 
   void _onUpdateConversations(

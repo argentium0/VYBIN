@@ -50,7 +50,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _isLoading = false;
       });
 
-      // Show beautiful success dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -69,14 +68,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 SizedBox(width: 8),
                 Text(
                   'Email Sent',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             content: Text(
               'A password reset link has been successfully sent to $email. '
               'Please check your inbox to continue.',
-              style: const TextStyle(color: VybinTheme.secondaryText, fontSize: 14),
+              style: const TextStyle(
+                color: VybinTheme.secondaryText,
+                fontSize: 14,
+              ),
             ),
             actions: [
               ElevatedButton(
@@ -88,8 +93,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.of(context).pop(); // dismiss dialog
-                  context.go('/login'); // navigate to login
+                  Navigator.of(context).pop();
+                  context.go('/login');
                 },
                 child: const Text('Back to Login'),
               ),
@@ -110,7 +115,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       } else if (e.code == 'invalid-email') {
         errorMessage = 'The email address is invalid.';
       } else if (e.code == 'network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
+        errorMessage =
+            'Network error. Please check your internet connection and try again.';
       } else if (e.message != null) {
         errorMessage = e.message!;
       }
@@ -143,7 +149,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Reset Password', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Reset Password',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
@@ -158,7 +167,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 24),
-                // Heading
+
                 Text(
                   'Recover Your Account',
                   style: VybinTheme.headline1.copyWith(
@@ -179,12 +188,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // E2EE Warning Box (Material design accent styling)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: VybinTheme.errorColor.withValues(alpha: 0.1),
-                    border: Border.all(color: VybinTheme.errorColor.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: VybinTheme.errorColor.withValues(alpha: 0.5),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -226,7 +236,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Email input field
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -243,7 +252,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Submit button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleResetPassword,
                   style: ElevatedButton.styleFrom(

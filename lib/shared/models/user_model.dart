@@ -1,16 +1,14 @@
 import 'package:equatable/equatable.dart';
 
-/// Type-safe, immutable data model representing a user profile in project **VYBIN**.
-/// Implements all security, profile, and cryptographic fields as defined in Section 7.2 of the spec.
 class UserModel extends Equatable {
   final String uid;
   final String username;
   final String displayName;
   final String email;
   final String? profilePhotoUrl;
-  final String publicKey; // RSA public key in PEM format
+  final String publicKey;
   final String? fcmToken;
-  final String onlineStatus; // 'online' | 'offline'
+  final String onlineStatus;
   final bool isOnline;
   final DateTime lastSeen;
   final String about;
@@ -35,7 +33,6 @@ class UserModel extends Equatable {
     this.currentSessionId,
   });
 
-  /// Factory constructor to create a [UserModel] from a JSON map (e.g. Firestore document).
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       uid: json['uid'] as String? ?? '',
@@ -50,7 +47,8 @@ class UserModel extends Equatable {
       lastSeen: _parseDateTime(json['lastSeen']),
       about: json['about'] as String? ?? 'Hey there! I am using VYBIN',
       createdAt: _parseDateTime(json['createdAt']),
-      blockedUids: (json['blockedUids'] as List<dynamic>?)
+      blockedUids:
+          (json['blockedUids'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -58,7 +56,6 @@ class UserModel extends Equatable {
     );
   }
 
-  /// Converts this [UserModel] instance to a JSON map.
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
@@ -70,7 +67,7 @@ class UserModel extends Equatable {
       'fcmToken': fcmToken,
       'onlineStatus': onlineStatus,
       'isOnline': isOnline,
-      'lastSeen': lastSeen.toIso8601String(), // Serialize to ISO string for JSON compatibility
+      'lastSeen': lastSeen.toIso8601String(),
       'about': about,
       'createdAt': createdAt.toIso8601String(),
       'blockedUids': blockedUids,
@@ -78,7 +75,6 @@ class UserModel extends Equatable {
     };
   }
 
-  /// Creates a copy of this [UserModel] but with the given fields replaced with new values.
   UserModel copyWith({
     String? uid,
     String? username,
@@ -100,7 +96,9 @@ class UserModel extends Equatable {
       username: username ?? this.username,
       displayName: displayName ?? this.displayName,
       email: email ?? this.email,
-      profilePhotoUrl: profilePhotoUrl != null ? profilePhotoUrl() : this.profilePhotoUrl,
+      profilePhotoUrl: profilePhotoUrl != null
+          ? profilePhotoUrl()
+          : this.profilePhotoUrl,
       publicKey: publicKey ?? this.publicKey,
       fcmToken: fcmToken != null ? fcmToken() : this.fcmToken,
       onlineStatus: onlineStatus ?? this.onlineStatus,
@@ -109,29 +107,30 @@ class UserModel extends Equatable {
       about: about ?? this.about,
       createdAt: createdAt ?? this.createdAt,
       blockedUids: blockedUids ?? this.blockedUids,
-      currentSessionId: currentSessionId != null ? currentSessionId() : this.currentSessionId,
+      currentSessionId: currentSessionId != null
+          ? currentSessionId()
+          : this.currentSessionId,
     );
   }
 
   @override
   List<Object?> get props => [
-        uid,
-        username,
-        displayName,
-        email,
-        profilePhotoUrl,
-        publicKey,
-        fcmToken,
-        onlineStatus,
-        isOnline,
-        lastSeen,
-        about,
-        createdAt,
-        blockedUids,
-        currentSessionId,
-      ];
+    uid,
+    username,
+    displayName,
+    email,
+    profilePhotoUrl,
+    publicKey,
+    fcmToken,
+    onlineStatus,
+    isOnline,
+    lastSeen,
+    about,
+    createdAt,
+    blockedUids,
+    currentSessionId,
+  ];
 
-  /// Utility method to parse dynamic date fields from JSON/Firestore
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
     if (value is String) {
@@ -140,7 +139,7 @@ class UserModel extends Equatable {
     if (value is int) {
       return DateTime.fromMillisecondsSinceEpoch(value);
     }
-    // Handle Firestore Timestamp object (has toDate() method)
+
     try {
       return value.toDate();
     } catch (_) {

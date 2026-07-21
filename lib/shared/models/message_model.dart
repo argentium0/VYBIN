@@ -1,37 +1,30 @@
 import 'package:equatable/equatable.dart';
 
-/// Type-safe, immutable data model representing an encrypted message in project **VYBIN**.
-/// Fully implements all specified cryptographic data fields and serialization mapping as defined in Section 7.5.
 class MessageModel extends Equatable {
   final String messageId;
   final String senderUid;
   final DateTime timestamp;
-  final String type; // 'text' | 'image' | 'voice' | 'document'
-  
-  // Cryptographic payloads (encrypted text/metadata)
-  final String iv; // base64(12-byte GCM nonce)
-  final String ciphertext; // base64(AES-256-GCM encrypted content)
-  final Map<String, String> encryptedKeys; // Map of uid -> base64(RSA-OAEP encrypted AES key)
-  
-  // Transient fields (not serialized to Firestore)
-  final String? plaintext; // Decrypted message content
-  
-  // Status tracking
-  final String status; // 'sent' | 'delivered' | 'read' | 'failed'
+  final String type;
+
+  final String iv;
+  final String ciphertext;
+  final Map<String, String> encryptedKeys;
+
+  final String? plaintext;
+
+  final String status;
   final DateTime? deliveredAt;
   final DateTime? readAt;
-  
-  // Media payload fields (nullable, populated if type is 'image' | 'voice' | 'document')
-  final String? mediaUrl; // Firebase Storage URL for encrypted media blob
-  final String? mediaIv; // Separate IV for encrypted media file
-  final Map<String, String>? mediaEncryptedKeys; // Map of uid -> base64(RSA-OAEP encrypted AES key for media)
-  final int? mediaSize; // bytes
+
+  final String? mediaUrl;
+  final String? mediaIv;
+  final Map<String, String>? mediaEncryptedKeys;
+  final int? mediaSize;
   final String? mediaMimeType;
-  final String? mediaOriginalFilename; // Encrypted/plaintext original filename
-  final int? durationMs; // Voice recording duration in milliseconds
-  
-  // Soft delete fields
-  final List<String> deletedFor; // List of uids who deleted this message for themselves
+  final String? mediaOriginalFilename;
+  final int? durationMs;
+
+  final List<String> deletedFor;
   final bool deletedForEveryone;
   final DateTime? deletedForEveryoneAt;
   final bool isDeleted;
@@ -63,9 +56,7 @@ class MessageModel extends Equatable {
     this.hasDecryptionError = false,
   });
 
-  /// Factory constructor to create a [MessageModel] from a JSON map (e.g. Firestore document).
   factory MessageModel.fromJson(Map<String, dynamic> json) {
-    // Parse encryptedKeys
     final keysMap = <String, String>{};
     if (json['encryptedKeys'] != null && json['encryptedKeys'] is Map) {
       (json['encryptedKeys'] as Map<dynamic, dynamic>).forEach((key, value) {
@@ -73,11 +64,14 @@ class MessageModel extends Equatable {
       });
     }
 
-    // Parse mediaEncryptedKeys if present
     Map<String, String>? mediaKeysMap;
-    if (json['mediaEncryptedKeys'] != null && json['mediaEncryptedKeys'] is Map) {
+    if (json['mediaEncryptedKeys'] != null &&
+        json['mediaEncryptedKeys'] is Map) {
       mediaKeysMap = <String, String>{};
-      (json['mediaEncryptedKeys'] as Map<dynamic, dynamic>).forEach((key, value) {
+      (json['mediaEncryptedKeys'] as Map<dynamic, dynamic>).forEach((
+        key,
+        value,
+      ) {
         mediaKeysMap![key.toString()] = value.toString();
       });
     }
@@ -100,18 +94,20 @@ class MessageModel extends Equatable {
       mediaMimeType: json['mediaMimeType'] as String?,
       mediaOriginalFilename: json['mediaOriginalFilename'] as String?,
       durationMs: json['durationMs'] as int?,
-      deletedFor: (json['deletedFor'] as List<dynamic>?)
+      deletedFor:
+          (json['deletedFor'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
       deletedForEveryone: json['deletedForEveryone'] as bool? ?? false,
-      deletedForEveryoneAt: _parseNullableDateTime(json['deletedForEveryoneAt']),
+      deletedForEveryoneAt: _parseNullableDateTime(
+        json['deletedForEveryoneAt'],
+      ),
       isDeleted: json['isDeleted'] as bool? ?? false,
       hasDecryptionError: json['hasDecryptionError'] as bool? ?? false,
     );
   }
 
-  /// Converts this [MessageModel] instance to a JSON map.
   Map<String, dynamic> toJson() {
     return {
       'messageId': messageId,
@@ -139,7 +135,6 @@ class MessageModel extends Equatable {
     };
   }
 
-  /// Creates a copy of this [MessageModel] but with the given fields replaced.
   MessageModel copyWith({
     String? messageId,
     String? senderUid,
@@ -179,14 +174,22 @@ class MessageModel extends Equatable {
       readAt: readAt != null ? readAt() : this.readAt,
       mediaUrl: mediaUrl != null ? mediaUrl() : this.mediaUrl,
       mediaIv: mediaIv != null ? mediaIv() : this.mediaIv,
-      mediaEncryptedKeys: mediaEncryptedKeys != null ? mediaEncryptedKeys() : this.mediaEncryptedKeys,
+      mediaEncryptedKeys: mediaEncryptedKeys != null
+          ? mediaEncryptedKeys()
+          : this.mediaEncryptedKeys,
       mediaSize: mediaSize != null ? mediaSize() : this.mediaSize,
-      mediaMimeType: mediaMimeType != null ? mediaMimeType() : this.mediaMimeType,
-      mediaOriginalFilename: mediaOriginalFilename != null ? mediaOriginalFilename() : this.mediaOriginalFilename,
+      mediaMimeType: mediaMimeType != null
+          ? mediaMimeType()
+          : this.mediaMimeType,
+      mediaOriginalFilename: mediaOriginalFilename != null
+          ? mediaOriginalFilename()
+          : this.mediaOriginalFilename,
       durationMs: durationMs != null ? durationMs() : this.durationMs,
       deletedFor: deletedFor ?? this.deletedFor,
       deletedForEveryone: deletedForEveryone ?? this.deletedForEveryone,
-      deletedForEveryoneAt: deletedForEveryoneAt != null ? deletedForEveryoneAt() : this.deletedForEveryoneAt,
+      deletedForEveryoneAt: deletedForEveryoneAt != null
+          ? deletedForEveryoneAt()
+          : this.deletedForEveryoneAt,
       isDeleted: isDeleted ?? this.isDeleted,
       hasDecryptionError: hasDecryptionError ?? this.hasDecryptionError,
     );
@@ -194,32 +197,31 @@ class MessageModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        messageId,
-        senderUid,
-        timestamp,
-        type,
-        iv,
-        ciphertext,
-        encryptedKeys,
-        plaintext,
-        status,
-        deliveredAt,
-        readAt,
-        mediaUrl,
-        mediaIv,
-        mediaEncryptedKeys,
-        mediaSize,
-        mediaMimeType,
-        mediaOriginalFilename,
-        durationMs,
-        deletedFor,
-        deletedForEveryone,
-        deletedForEveryoneAt,
-        isDeleted,
-        hasDecryptionError,
-      ];
+    messageId,
+    senderUid,
+    timestamp,
+    type,
+    iv,
+    ciphertext,
+    encryptedKeys,
+    plaintext,
+    status,
+    deliveredAt,
+    readAt,
+    mediaUrl,
+    mediaIv,
+    mediaEncryptedKeys,
+    mediaSize,
+    mediaMimeType,
+    mediaOriginalFilename,
+    durationMs,
+    deletedFor,
+    deletedForEveryone,
+    deletedForEveryoneAt,
+    isDeleted,
+    hasDecryptionError,
+  ];
 
-  /// Utility method to parse dynamic date fields from JSON/Firestore.
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
     if (value is String) {
@@ -239,7 +241,6 @@ class MessageModel extends Equatable {
     }
   }
 
-  /// Utility method to parse dynamic nullable date fields from JSON/Firestore.
   static DateTime? _parseNullableDateTime(dynamic value) {
     if (value == null) return null;
     if (value is String) {

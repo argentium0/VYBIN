@@ -30,24 +30,25 @@ extension ZegoUIKitSignalingPluginExtension on ZegoUIKitSignalingPlugin {
   }
 
   void setupPeerToRoomCommandBridge() {
-    eventCenter.passThroughEvent.onReceivePeerMessage = (zim, messageList, fromUserID) {
-      for (final msg in messageList) {
-        if (msg is ZIMCommandMessage) {
-          final inRoomMsg = ZegoSignalingPluginInRoomCommandMessage(
-            message: msg.message,
-            senderUserID: fromUserID,
-            orderKey: msg.orderKey,
-            timestamp: msg.timestamp,
-          );
-          
-          eventCenter.inRoomCommandMessageReceived.add(
-            ZegoSignalingPluginInRoomCommandMessageReceivedEvent(
-              messages: [inRoomMsg],
-              roomID: '',
-            ),
-          );
-        }
-      }
-    };
+    eventCenter.passThroughEvent.onReceivePeerMessage =
+        (zim, messageList, fromUserID) {
+          for (final msg in messageList) {
+            if (msg is ZIMCommandMessage) {
+              final inRoomMsg = ZegoSignalingPluginInRoomCommandMessage(
+                message: msg.message,
+                senderUserID: fromUserID,
+                orderKey: msg.orderKey,
+                timestamp: msg.timestamp,
+              );
+
+              eventCenter.inRoomCommandMessageReceived.add(
+                ZegoSignalingPluginInRoomCommandMessageReceivedEvent(
+                  messages: [inRoomMsg],
+                  roomID: '',
+                ),
+              );
+            }
+          }
+        };
   }
 }

@@ -68,7 +68,10 @@ class _NewChatScreenState extends State<NewChatScreen> {
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('New Secure Chat', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'New Secure Chat',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => context.pop(),
@@ -126,7 +129,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   style: TextStyle(
                     color: _foundUser != null
                         ? VybinTheme.whatsappGreen
-                        : (_searchingUser ? Colors.white70 : VybinTheme.errorColor),
+                        : (_searchingUser
+                              ? Colors.white70
+                              : VybinTheme.errorColor),
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -139,7 +144,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   decoration: BoxDecoration(
                     color: VybinTheme.cardCharcoal,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: VybinTheme.whatsappGreen.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: VybinTheme.whatsappGreen.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -150,7 +157,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             radius: 28,
                             backgroundColor: VybinTheme.whatsappTeal,
                             child: Text(
-                              _foundUser!.displayName.substring(0, 2).toUpperCase(),
+                              _foundUser!.displayName
+                                  .substring(0, 2)
+                                  .toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -187,7 +196,10 @@ class _NewChatScreenState extends State<NewChatScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'About: ${_foundUser!.about}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
@@ -206,32 +218,43 @@ class _NewChatScreenState extends State<NewChatScreen> {
                             final otherUid = _foundUser!.uid;
                             final chatRepo = context.read<ChatRepository>();
 
-                            final conversationId = chatRepo.generateConversationId(myUid, otherUid);
-                            
+                            final conversationId = chatRepo
+                                .generateConversationId(myUid, otherUid);
+
                             await chatRepo.createConversation(
                               conversationId: conversationId,
                               participantUids: [myUid, otherUid],
                             );
 
                             if (context.mounted) {
-                              context.pop(); // Close search page
+                              context.pop();
                               context.push(
                                 '/chat/$conversationId',
                                 extra: {
                                   'contactName': _foundUser!.displayName,
-                                  'contactAvatarInitials': _foundUser!.displayName.substring(0, 2).toUpperCase(),
+                                  'contactAvatarInitials': _foundUser!
+                                      .displayName
+                                      .substring(0, 2)
+                                      .toUpperCase(),
                                 },
                               );
                             }
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('You must be logged in to start a conversation.')),
+                              const SnackBar(
+                                content: Text(
+                                  'You must be logged in to start a conversation.',
+                                ),
+                              ),
                             );
                           }
                         },
                         child: const Text(
                           'Message',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],

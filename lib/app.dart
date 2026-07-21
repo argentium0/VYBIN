@@ -63,13 +63,11 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
     final authBloc = context.read<AuthBloc>();
     _router = AppRouter.createRouter(authBloc);
 
-    // Listen to notification taps when app is in the background
     if (Firebase.apps.isNotEmpty) {
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         _handleNotificationRoute(message);
       });
 
-      // Check if the app was opened from a terminated state via a notification
       FirebaseMessaging.instance.getInitialMessage().then((
         RemoteMessage? message,
       ) {
@@ -78,7 +76,6 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
         }
       });
 
-      // Listen to messages while the app is in the foreground
       FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         final senderUid = message.data['sender_uid'] as String?;
         if (senderUid == null) return;
@@ -89,12 +86,10 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
         final sorted = [senderUid, myUid]..sort();
         final conversationId = sorted.join('_');
 
-        // Active app suppression: if actively viewing this chat thread, suppress the notification
         if (ActiveChatTracker.activeConversationId == conversationId) {
           return;
         }
 
-        // Decrypt and show local notification
         await NotificationService.decryptAndShowLocalNotification(message);
       });
     }
@@ -157,8 +152,12 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
           final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
           if (isMobile) {
             try {
-              ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(navigatorKey);
-              await ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI([ZegoUIKitSignalingPlugin()]);
+              ZegoUIKitPrebuiltCallInvitationService().setNavigatorKey(
+                navigatorKey,
+              );
+              await ZegoUIKitPrebuiltCallInvitationService().useSystemCallingUI(
+                [ZegoUIKitSignalingPlugin()],
+              );
               await ZegoUIKitPrebuiltCallInvitationService().init(
                 appID: zegoAppID,
                 appSign: zegoAppSign,
@@ -176,32 +175,40 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   ),
                 ),
                 invitationEvents: ZegoUIKitPrebuiltCallInvitationEvents(
-                  onIncomingCallTimeout: (String callID, ZegoCallUser caller) async {
-                    try {
-                      final chatRepository = context.read<ChatRepository>();
-                      await chatRepository.logCall(
-                        callId: callID,
-                        callerId: caller.id,
-                        receiverId: state.user.uid,
-                        status: 'missed',
-                      );
-                    } catch (e) {
-                      debugPrint('Error logging missed call: $e');
-                    }
-                  },
-                  onIncomingCallCanceled: (String callID, ZegoCallUser caller, String customData) async {
-                    try {
-                      final chatRepository = context.read<ChatRepository>();
-                      await chatRepository.logCall(
-                        callId: callID,
-                        callerId: caller.id,
-                        receiverId: state.user.uid,
-                        status: 'missed',
-                      );
-                    } catch (e) {
-                      debugPrint('Error logging missed call (canceled): $e');
-                    }
-                  },
+                  onIncomingCallTimeout:
+                      (String callID, ZegoCallUser caller) async {
+                        try {
+                          final chatRepository = context.read<ChatRepository>();
+                          await chatRepository.logCall(
+                            callId: callID,
+                            callerId: caller.id,
+                            receiverId: state.user.uid,
+                            status: 'missed',
+                          );
+                        } catch (e) {
+                          debugPrint('Error logging missed call: $e');
+                        }
+                      },
+                  onIncomingCallCanceled:
+                      (
+                        String callID,
+                        ZegoCallUser caller,
+                        String customData,
+                      ) async {
+                        try {
+                          final chatRepository = context.read<ChatRepository>();
+                          await chatRepository.logCall(
+                            callId: callID,
+                            callerId: caller.id,
+                            receiverId: state.user.uid,
+                            status: 'missed',
+                          );
+                        } catch (e) {
+                          debugPrint(
+                            'Error logging missed call (canceled): $e',
+                          );
+                        }
+                      },
                   onIncomingCallDeclineButtonPressed: () async {
                     try {
                       final callerId = _incomingCallerId;
@@ -219,52 +226,80 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                       debugPrint('Error logging declined call: $e');
                     }
                   },
-                  onOutgoingCallDeclined: (String callID, ZegoCallUser callee, String customData) async {
-                    try {
-                      final chatRepository = context.read<ChatRepository>();
-                      await chatRepository.logCall(
-                        callId: callID,
-                        callerId: state.user.uid,
-                        receiverId: callee.id,
-                        status: 'declined',
-                      );
-                    } catch (e) {
-                      debugPrint('Error logging declined call: $e');
-                    }
-                  },
-                  onIncomingCallReceived: (String callID, ZegoCallUser caller, ZegoCallInvitationType callType, List<ZegoCallUser> callees, String customData) {
-                    _incomingCallerId = caller.id;
-                    _incomingCallID = callID;
-                    _activeCallID = callID;
-                    _activeCallerId = caller.id;
-                    _activeReceiverId = state.user.uid;
-                  },
-                  onOutgoingCallSent: (String callID, ZegoCallUser caller, ZegoCallInvitationType callType, List<ZegoCallUser> callees, String customData) {
-                    _activeCallID = callID;
-                    _activeCallerId = state.user.uid;
-                    _activeReceiverId = callees.isNotEmpty ? callees.first.id : '';
-                  },
+                  onOutgoingCallDeclined:
+                      (
+                        String callID,
+                        ZegoCallUser callee,
+                        String customData,
+                      ) async {
+                        try {
+                          final chatRepository = context.read<ChatRepository>();
+                          await chatRepository.logCall(
+                            callId: callID,
+                            callerId: state.user.uid,
+                            receiverId: callee.id,
+                            status: 'declined',
+                          );
+                        } catch (e) {
+                          debugPrint('Error logging declined call: $e');
+                        }
+                      },
+                  onIncomingCallReceived:
+                      (
+                        String callID,
+                        ZegoCallUser caller,
+                        ZegoCallInvitationType callType,
+                        List<ZegoCallUser> callees,
+                        String customData,
+                      ) {
+                        _incomingCallerId = caller.id;
+                        _incomingCallID = callID;
+                        _activeCallID = callID;
+                        _activeCallerId = caller.id;
+                        _activeReceiverId = state.user.uid;
+                      },
+                  onOutgoingCallSent:
+                      (
+                        String callID,
+                        ZegoCallUser caller,
+                        ZegoCallInvitationType callType,
+                        List<ZegoCallUser> callees,
+                        String customData,
+                      ) {
+                        _activeCallID = callID;
+                        _activeCallerId = state.user.uid;
+                        _activeReceiverId = callees.isNotEmpty
+                            ? callees.first.id
+                            : '';
+                      },
                 ),
                 events: ZegoUIKitPrebuiltCallEvents(
-                  onCallEnd: (ZegoCallEndEvent event, VoidCallback defaultAction) async {
-                    try {
-                      if (_activeCallID == event.callID && _activeCallerId != null && _activeReceiverId != null) {
-                        final chatRepository = context.read<ChatRepository>();
-                        await chatRepository.logCall(
-                          callId: event.callID,
-                          callerId: _activeCallerId!,
-                          receiverId: _activeReceiverId!,
-                          status: 'completed',
-                        );
-                        _activeCallID = null;
-                        _activeCallerId = null;
-                        _activeReceiverId = null;
-                      }
-                    } catch (e) {
-                      debugPrint('Error logging completed call: $e');
-                    }
-                    defaultAction();
-                  },
+                  onCallEnd:
+                      (
+                        ZegoCallEndEvent event,
+                        VoidCallback defaultAction,
+                      ) async {
+                        try {
+                          if (_activeCallID == event.callID &&
+                              _activeCallerId != null &&
+                              _activeReceiverId != null) {
+                            final chatRepository = context
+                                .read<ChatRepository>();
+                            await chatRepository.logCall(
+                              callId: event.callID,
+                              callerId: _activeCallerId!,
+                              receiverId: _activeReceiverId!,
+                              status: 'completed',
+                            );
+                            _activeCallID = null;
+                            _activeCallerId = null;
+                            _activeReceiverId = null;
+                          }
+                        } catch (e) {
+                          debugPrint('Error logging completed call: $e');
+                        }
+                        defaultAction();
+                      },
                 ),
                 requireConfig: (ZegoCallInvitationData data) {
                   final config = data.type == ZegoCallInvitationType.videoCall
@@ -277,15 +312,12 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
 
                   config.topMenuBar = ZegoCallTopMenuBarConfig(
                     isVisible: true,
-                    buttons: [
-                      ZegoCallMenuBarButtonName.minimizingButton,
-                    ],
+                    buttons: [ZegoCallMenuBarButtonName.minimizingButton],
                   );
 
                   config
                       .audioVideoView
                       .foregroundBuilder = (context, size, user, extraInfo) {
-                    // If the width is less than 300, it is the small PiP overlay. Hide the text!
                     if (size.width < 300) {
                       return const SizedBox.shrink();
                     }
@@ -307,7 +339,10 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                             ),
                             child: const Text(
                               '🔒 Voice calls are secured in transit, but are NOT End-to-End Encrypted.',
-                              style: TextStyle(color: Colors.grey, fontSize: 11),
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 11,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -319,7 +354,7 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   return config;
                 },
               );
-              // ignore: avoid_print
+
               print("✅ ZEGO INITIALIZED SUCCESSFULLY");
 
               ZegoUIKitSignalingPlugin().setupPeerToRoomCommandBridge();
@@ -327,23 +362,24 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
               _signalingSubscription = ZegoUIKitSignalingPlugin()
                   .getInRoomCommandMessageReceivedEventStream()
                   .listen((event) async {
-                for (final msg in event.messages) {
-                  try {
-                    final commandData = jsonDecode(utf8.decode(msg.message)) as Map<String, dynamic>;
-                    if (commandData['type'] == 'new_text') {
-                      await NotificationService.showNotification(
-                        id: DateTime.now().millisecondsSinceEpoch.hashCode,
-                        title: 'New Encrypted Message',
-                        body: 'New Encrypted Message',
-                      );
+                    for (final msg in event.messages) {
+                      try {
+                        final commandData =
+                            jsonDecode(utf8.decode(msg.message))
+                                as Map<String, dynamic>;
+                        if (commandData['type'] == 'new_text') {
+                          await NotificationService.showNotification(
+                            id: DateTime.now().millisecondsSinceEpoch.hashCode,
+                            title: 'New Encrypted Message',
+                            body: 'New Encrypted Message',
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Failed to parse command message: $e');
+                      }
                     }
-                  } catch (e) {
-                    debugPrint('Failed to parse command message: $e');
-                  }
-                }
-              });
+                  });
             } catch (e) {
-              // ignore: avoid_print
               print("❌ ZEGO INIT ERROR: $e");
             }
           }
@@ -373,15 +409,16 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   home: const OnboardingScreen(),
                   debugShowCheckedModeBanner: false,
                   builder: (BuildContext context, Widget? child) {
-                    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+                    final isMobile =
+                        !kIsWeb && (Platform.isAndroid || Platform.isIOS);
                     return Stack(
                       children: [
-                        // ignore: use_null_aware_elements
                         if (child != null) child,
                         if (isMobile)
                           ZegoUIKitPrebuiltCallMiniOverlayPage(
                             contextQuery: () {
-                              return navigatorKey.currentState?.context ?? context;
+                              return navigatorKey.currentState?.context ??
+                                  context;
                             },
                           ),
                       ],
@@ -397,15 +434,16 @@ class _VybinAppState extends State<VybinApp> with WidgetsBindingObserver {
                   routerConfig: _router,
                   debugShowCheckedModeBanner: false,
                   builder: (BuildContext context, Widget? child) {
-                    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+                    final isMobile =
+                        !kIsWeb && (Platform.isAndroid || Platform.isIOS);
                     return Stack(
                       children: [
-                        // ignore: use_null_aware_elements
                         if (child != null) child,
                         if (isMobile)
                           ZegoUIKitPrebuiltCallMiniOverlayPage(
                             contextQuery: () {
-                              return navigatorKey.currentState?.context ?? context;
+                              return navigatorKey.currentState?.context ??
+                                  context;
                             },
                           ),
                       ],

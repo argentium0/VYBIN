@@ -53,7 +53,8 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
   void _checkForChanges() {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      final changed = _displayNameController.text != authState.user.displayName ||
+      final changed =
+          _displayNameController.text != authState.user.displayName ||
           _aboutController.text != authState.user.about;
       if (changed != _hasChanges) {
         setState(() {
@@ -110,7 +111,10 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
       backgroundColor: VybinTheme.darkCharcoal,
       appBar: AppBar(
         backgroundColor: VybinTheme.whatsappDarkTeal,
-        title: const Text('Profile Settings', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Profile Settings',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
@@ -134,16 +138,18 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                 ),
                 backgroundColor: VybinTheme.whatsappGreen,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           } else if (state is AuthError) {
             setState(() {
               _isSaving = false;
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.errorMessage)));
           } else if (state is AuthNetworkError) {
             setState(() {
               _isSaving = false;
@@ -175,11 +181,12 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Large profile photo section with circular avatar and edit icon
                     Container(
                       height: 220,
                       decoration: BoxDecoration(
-                        color: VybinTheme.whatsappDarkTeal.withValues(alpha: 0.1),
+                        color: VybinTheme.whatsappDarkTeal.withValues(
+                          alpha: 0.1,
+                        ),
                         border: const Border(
                           bottom: BorderSide(color: VybinTheme.dividerCharcoal),
                         ),
@@ -189,7 +196,9 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                         children: [
                           Positioned.fill(
                             child: Container(
-                              color: VybinTheme.whatsappTeal.withValues(alpha: 0.05),
+                              color: VybinTheme.whatsappTeal.withValues(
+                                alpha: 0.05,
+                              ),
                             ),
                           ),
                           Column(
@@ -199,17 +208,18 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                                 children: [
                                   CachedNetworkImage(
                                     imageUrl: user.profilePhotoUrl ?? '',
-                                    imageBuilder: (context, imageProvider) => Container(
-                                      width: 120,
-                                      height: 120,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        image: DecorationImage(
-                                          image: imageProvider,
-                                          fit: BoxFit.cover,
+                                    imageBuilder: (context, imageProvider) =>
+                                        Container(
+                                          width: 120,
+                                          height: 120,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            image: DecorationImage(
+                                              image: imageProvider,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
                                     placeholder: (context, url) => Container(
                                       width: 120,
                                       height: 120,
@@ -223,20 +233,25 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                                         ),
                                       ),
                                     ),
-                                    errorWidget: (context, url, error) => CircleAvatar(
-                                      radius: 60,
-                                      backgroundColor: VybinTheme.whatsappTeal,
-                                      child: Text(
-                                        user.displayName.length >= 2
-                                            ? user.displayName.substring(0, 2).toUpperCase()
-                                            : user.displayName.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 36,
-                                          fontWeight: FontWeight.bold,
+                                    errorWidget: (context, url, error) =>
+                                        CircleAvatar(
+                                          radius: 60,
+                                          backgroundColor:
+                                              VybinTheme.whatsappTeal,
+                                          child: Text(
+                                            user.displayName.length >= 2
+                                                ? user.displayName
+                                                      .substring(0, 2)
+                                                      .toUpperCase()
+                                                : user.displayName
+                                                      .toUpperCase(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 36,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
                                   ),
                                   Positioned(
                                     bottom: 0,
@@ -245,7 +260,8 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                                       onTap: _pickAndUploadImage,
                                       child: CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: VybinTheme.neonHighlight,
+                                        backgroundColor:
+                                            VybinTheme.neonHighlight,
                                         child: const Icon(
                                           Icons.camera_alt,
                                           color: Colors.black,
@@ -277,14 +293,20 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Display Name input (Editable)
                           TextFormField(
                             controller: _displayNameController,
                             style: const TextStyle(color: Colors.white),
                             decoration: const InputDecoration(
                               labelText: 'Display Name',
-                              prefixIcon: Icon(Icons.person_outline, color: VybinTheme.secondaryText),
-                              suffixIcon: Icon(Icons.edit, color: VybinTheme.whatsappGreen, size: 20),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                color: VybinTheme.secondaryText,
+                              ),
+                              suffixIcon: Icon(
+                                Icons.edit,
+                                color: VybinTheme.whatsappGreen,
+                                size: 20,
+                              ),
                             ),
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
@@ -295,7 +317,6 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Username field (Read-only, lock icon)
                           TextFormField(
                             initialValue: '@${user.username}',
                             readOnly: true,
@@ -303,29 +324,45 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                             style: const TextStyle(color: Colors.white70),
                             decoration: const InputDecoration(
                               labelText: 'Username',
-                              prefixIcon: Icon(Icons.alternate_email_outlined, color: VybinTheme.secondaryText),
-                              suffixIcon: Icon(Icons.lock_outline, color: VybinTheme.secondaryText, size: 20),
+                              prefixIcon: Icon(
+                                Icons.alternate_email_outlined,
+                                color: VybinTheme.secondaryText,
+                              ),
+                              suffixIcon: Icon(
+                                Icons.lock_outline,
+                                color: VybinTheme.secondaryText,
+                                size: 20,
+                              ),
                               helperText: 'Username cannot be changed.',
-                              helperStyle: TextStyle(color: VybinTheme.secondaryText),
+                              helperStyle: TextStyle(
+                                color: VybinTheme.secondaryText,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
 
-                          // About Bio field (Editable, max 139 characters)
                           TextFormField(
                             controller: _aboutController,
                             style: const TextStyle(color: Colors.white),
                             maxLength: 139,
                             decoration: const InputDecoration(
                               labelText: 'About',
-                              prefixIcon: Icon(Icons.info_outline, color: VybinTheme.secondaryText),
-                              suffixIcon: Icon(Icons.edit, color: VybinTheme.whatsappGreen, size: 20),
-                              counterStyle: TextStyle(color: VybinTheme.secondaryText),
+                              prefixIcon: Icon(
+                                Icons.info_outline,
+                                color: VybinTheme.secondaryText,
+                              ),
+                              suffixIcon: Icon(
+                                Icons.edit,
+                                color: VybinTheme.whatsappGreen,
+                                size: 20,
+                              ),
+                              counterStyle: TextStyle(
+                                color: VybinTheme.secondaryText,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
 
-                          // Email field (Read-only, lock icon)
                           TextFormField(
                             initialValue: user.email,
                             readOnly: true,
@@ -333,15 +370,23 @@ class _OwnProfileScreenState extends State<OwnProfileScreen> {
                             style: const TextStyle(color: Colors.white70),
                             decoration: const InputDecoration(
                               labelText: 'Email Address',
-                              prefixIcon: Icon(Icons.mail_outline, color: VybinTheme.secondaryText),
-                              suffixIcon: Icon(Icons.lock_outline, color: VybinTheme.secondaryText, size: 20),
+                              prefixIcon: Icon(
+                                Icons.mail_outline,
+                                color: VybinTheme.secondaryText,
+                              ),
+                              suffixIcon: Icon(
+                                Icons.lock_outline,
+                                color: VybinTheme.secondaryText,
+                                size: 20,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 40),
 
-                          // Save Changes button
                           ElevatedButton(
-                            onPressed: (_hasChanges && !_isSaving) ? _saveChanges : null,
+                            onPressed: (_hasChanges && !_isSaving)
+                                ? _saveChanges
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: VybinTheme.whatsappGreen,
                               foregroundColor: Colors.white,

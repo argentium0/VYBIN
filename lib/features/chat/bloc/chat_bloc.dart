@@ -10,17 +10,15 @@ import 'chat_state.dart';
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ChatRepository _chatRepository;
   final String _currentUid;
-  
+
   StreamSubscription<List<MessageModel>>? _messagesSubscription;
   UserModel? _senderUser;
   UserModel? _recipientUser;
 
-  ChatBloc({
-    required ChatRepository chatRepository,
-    required String currentUid,
-  })  : _chatRepository = chatRepository,
-        _currentUid = currentUid,
-        super(ChatInitial()) {
+  ChatBloc({required ChatRepository chatRepository, required String currentUid})
+    : _chatRepository = chatRepository,
+      _currentUid = currentUid,
+      super(ChatInitial()) {
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
     on<DeleteMessageForMeEvent>(_onDeleteMessageForMe);
@@ -28,11 +26,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<UpdateMessagesReceived>(_onUpdateMessagesReceived);
   }
 
-  Future<void> _onLoadMessages(LoadMessages event, Emitter<ChatState> emit) async {
+  Future<void> _onLoadMessages(
+    LoadMessages event,
+    Emitter<ChatState> emit,
+  ) async {
     emit(ChatLoading());
 
     final uids = event.conversationId.split('_');
-    final otherUid = uids.firstWhere((uid) => uid != _currentUid, orElse: () => '');
+    final otherUid = uids.firstWhere(
+      (uid) => uid != _currentUid,
+      orElse: () => '',
+    );
 
     try {
       _senderUser = await _chatRepository.getUserById(_currentUid);
@@ -42,19 +46,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _messagesSubscription = _chatRepository
           .getMessagesStream(event.conversationId, _currentUid)
           .listen((msgModels) {
-        final messages = msgModels.map(_mapModelToMessage).toList();
-        if (!isClosed) {
-          add(UpdateMessagesReceived(messages, event.conversationId));
-        }
+            final messages = msgModels.map(_mapModelToMessage).toList();
+            if (!isClosed) {
+              add(UpdateMessagesReceived(messages, event.conversationId));
+            }
 
-        // Whenever messages update, if there are unread messages from other user, mark as read
-        _chatRepository.markMessagesAsRead(
-          conversationId: event.conversationId,
-          myUid: _currentUid,
-        );
-      });
+            _chatRepository.markMessagesAsRead(
+              conversationId: event.conversationId,
+              myUid: _currentUid,
+            );
+          });
 
-      // Mark initially loaded messages as read
       await _chatRepository.markMessagesAsRead(
         conversationId: event.conversationId,
         myUid: _currentUid,
@@ -64,16 +66,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  void _onUpdateMessagesReceived(UpdateMessagesReceived event, Emitter<ChatState> emit) {
+  void _onUpdateMessagesReceived(
+    UpdateMessagesReceived event,
+    Emitter<ChatState> emit,
+  ) {
     emit(ChatLoaded(event.messages, event.conversationId));
   }
 
-  Future<void> _onSendMessage(SendMessage event, Emitter<ChatState> emit) async {
+  Future<void> _onSendMessage(
+    SendMessage event,
+    Emitter<ChatState> emit,
+  ) async {
     final currentState = state;
     if (currentState is ChatLoaded) {
       if (_senderUser == null || _recipientUser == null) {
         emit(const ChatError('User profiles not fully loaded.'));
-        // Restore loaded state if it was loaded
+
         emit(currentState);
         return;
       }
@@ -88,7 +96,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             senderPubKeyPEM: _senderUser!.publicKey,
             recipientPubKeyPEM: _recipientUser!.publicKey,
           );
-        } else if (event.type == 'voice' || event.type == 'image' || event.type == 'video' || event.type == 'document') {
+        } else if (event.type == 'voice' ||
+            event.type == 'image' ||
+            event.type == 'video' ||
+            event.type == 'document') {
           await _chatRepository.sendMediaMessage(
             conversationId: currentState.conversationId,
             senderUid: _currentUid,
@@ -107,7 +118,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  Future<void> _onDeleteMessageForMe(DeleteMessageForMeEvent event, Emitter<ChatState> emit) async {
+  Future<void> _onDeleteMessageForMe(
+    DeleteMessageForMeEvent event,
+    Emitter<ChatState> emit,
+  ) async {
     final currentState = state;
     if (currentState is ChatLoaded) {
       try {
@@ -120,7 +134,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  Future<void> _onDeleteMessageForEveryone(DeleteMessageForEveryoneEvent event, Emitter<ChatState> emit) async {
+  Future<void> _onDeleteMessageForEveryone(
+    DeleteMessageForEveryoneEvent event,
+    Emitter<ChatState> emit,
+  ) async {
     final currentState = state;
     if (currentState is ChatLoaded) {
       try {

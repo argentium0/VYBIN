@@ -18,7 +18,7 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   final _displayNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -49,13 +49,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Live username check state
   Timer? _debounceTimer;
   bool _isCheckingUsername = false;
   bool? _isUsernameAvailable;
   String _usernameFeedback = '';
 
-  // Password strength state
   String _passwordStrength = 'None';
 
   @override
@@ -79,10 +77,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  // --- Live Validation Handlers ---
-
   void _onUsernameFocusChanged() {
-    // If the username field loses focus, trigger immediate availability check
     if (!_usernameFocusNode.hasFocus) {
       _checkUsernameAvailability(_usernameController.text.trim());
     }
@@ -101,7 +96,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Format validation (regex: ^[a-z0-9_]{3,20}$)
     final usernameRegex = RegExp(r'^[a-z0-9_]{3,20}$');
     if (!usernameRegex.hasMatch(text.toLowerCase())) {
       setState(() {
@@ -112,7 +106,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Start checking availability debounced
     setState(() {
       _isCheckingUsername = true;
       _usernameFeedback = 'Checking availability...';
@@ -136,7 +129,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Simulating database lookup delay
     setState(() {
       _isCheckingUsername = true;
       _usernameFeedback = 'Checking availability...';
@@ -175,7 +167,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _passwordStrength = 'Fair';
       });
     } else {
-      // Check if it has at least one number
       final numRegex = RegExp(r'[0-9]');
       if (numRegex.hasMatch(text)) {
         setState(() {
@@ -188,8 +179,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     }
   }
-
-  // --- Form Validation Rules ---
 
   String? _validateDisplayName(String? value) {
     if (value == null || value.trim().isEmpty) {
@@ -251,8 +240,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _submitForm() {
-    // If not checked yet, run immediate availability check before submitting
-    if (_isUsernameAvailable == null && _usernameController.text.trim().isNotEmpty) {
+    if (_isUsernameAvailable == null &&
+        _usernameController.text.trim().isNotEmpty) {
       _checkUsernameAvailability(_usernameController.text.trim()).then((_) {
         _performSignUpSubmit();
       });
@@ -301,7 +290,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: [
               Text(
                 'Strength: ',
-                style: VybinTheme.caption.copyWith(color: VybinTheme.secondaryText),
+                style: VybinTheme.caption.copyWith(
+                  color: VybinTheme.secondaryText,
+                ),
               ),
               Text(
                 _passwordStrength,
@@ -352,7 +343,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 backgroundColor: VybinTheme.errorColor,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           } else if (state is AuthNetworkError) {
@@ -367,21 +360,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 backgroundColor: VybinTheme.errorColor,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           } else if (state is AuthEmailUnverified) {
-            // Contextual AlertDialog popup on success
             showDialog(
               context: context,
               barrierDismissible: false,
               builder: (BuildContext context) {
                 return AlertDialog(
                   backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   title: Row(
                     children: [
-                      const Icon(Icons.vpn_key_outlined, color: VybinTheme.whatsappGreen),
+                      const Icon(
+                        Icons.vpn_key_outlined,
+                        color: VybinTheme.whatsappGreen,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Account Created 🔑',
@@ -410,7 +409,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         'A cryptographically secure RSA-2048 public/private keypair has been generated on your device. '
                         'Your private key is encrypted and stored locally in your keystore, while your public key has been registered on the server.',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.85),
                           fontSize: 14,
                         ),
                       ),
@@ -421,12 +422,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: VybinTheme.whatsappGreen,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Verify Email'),
                       onPressed: () {
-                        Navigator.of(context).pop(); // dismiss dialog
-                        context.go('/verify-email'); // route to verify-email
+                        Navigator.of(context).pop();
+                        context.go('/verify-email');
                       },
                     ),
                   ],
@@ -440,14 +443,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
           return SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 16),
-                    // Profile photo picker (Spec 9.3)
+
                     Center(
                       child: GestureDetector(
                         onTap: _pickImage,
@@ -463,8 +469,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ? Icon(
                                       Icons.person_outline,
                                       size: 48,
-                                      // ignore: deprecated_member_use
-                                      color: VybinTheme.secondaryText.withOpacity(0.5),
+
+                                      color: VybinTheme.secondaryText
+                                          .withOpacity(0.5),
                                     )
                                   : null,
                             ),
@@ -490,28 +497,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Display Name Field
                     TextFormField(
                       controller: _displayNameController,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: const InputDecoration(
                         hintText: 'Display Name',
-                        prefixIcon: Icon(Icons.badge_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: Icon(
+                          Icons.badge_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                       ),
                       validator: _validateDisplayName,
                     ),
                     const SizedBox(height: 16),
 
-                    // Username Field (with @ prefix and live check) (Spec 9.3)
                     TextFormField(
                       controller: _usernameController,
                       focusNode: _usernameFocusNode,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Username',
-                        prefixIcon: const Icon(Icons.alternate_email_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.alternate_email_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                         prefixText: '@ ',
                         prefixStyle: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
@@ -531,15 +546,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               )
                             : (_isUsernameAvailable != null
-                                ? Icon(
-                                    _isUsernameAvailable! ? Icons.check_circle : Icons.error_outline,
-                                    color: _isUsernameAvailable! ? VybinTheme.whatsappGreen : VybinTheme.errorColor,
-                                  )
-                                : null),
+                                  ? Icon(
+                                      _isUsernameAvailable!
+                                          ? Icons.check_circle
+                                          : Icons.error_outline,
+                                      color: _isUsernameAvailable!
+                                          ? VybinTheme.whatsappGreen
+                                          : VybinTheme.errorColor,
+                                    )
+                                  : null),
                       ),
                       validator: _validateUsername,
                     ),
-                    // Username feedback text
+
                     if (_usernameFeedback.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Padding(
@@ -551,40 +570,50 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             color: _isUsernameAvailable == true
                                 ? VybinTheme.whatsappGreen
                                 : (_isUsernameAvailable == false
-                                    ? VybinTheme.errorColor
-                                    : VybinTheme.secondaryText),
+                                      ? VybinTheme.errorColor
+                                      : VybinTheme.secondaryText),
                           ),
                         ),
                       ),
                     ],
                     const SizedBox(height: 16),
 
-                    // Email Field
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: const InputDecoration(
                         hintText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                       ),
                       validator: _validateEmail,
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {
@@ -596,27 +625,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       validator: _validatePassword,
                     ),
-                    // Visual Password strength indicator bar (Spec 9.3)
+
                     _buildPasswordStrengthBar(),
                     const SizedBox(height: 16),
 
-                    // Confirm Password Field
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
                       enabled: !isLoading,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Confirm Password',
-                        prefixIcon: const Icon(Icons.lock_reset_outlined, color: VybinTheme.secondaryText),
+                        prefixIcon: const Icon(
+                          Icons.lock_reset_outlined,
+                          color: VybinTheme.secondaryText,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: VybinTheme.secondaryText,
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                         ),
@@ -625,7 +661,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Create Account Button (Spec 9.3)
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: VybinTheme.whatsappGreen,
@@ -656,7 +691,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // "Already have an account? Log In" link at bottom (Spec 9.3)
                     Center(
                       child: GestureDetector(
                         onTap: isLoading ? null : () => context.pop(),

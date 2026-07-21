@@ -6,14 +6,15 @@ import 'package:vybin/shared/models/conversation_model.dart';
 void main() {
   group('UserModel Tests', () {
     final now = DateTime(2026, 6, 26, 12, 0, 0);
-    
+
     final userJson = {
       'uid': 'user123',
       'username': 'alice_dev',
       'displayName': 'Alice',
       'email': 'alice@example.com',
       'profilePhotoUrl': 'https://example.com/photo.png',
-      'publicKey': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...',
+      'publicKey':
+          '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...',
       'fcmToken': 'fcmToken123',
       'onlineStatus': 'online',
       'lastSeen': now.toIso8601String(),
@@ -71,7 +72,7 @@ void main() {
       expect(copied.displayName, 'Alice Updated');
       expect(copied.fcmToken, isNull);
       expect(copied.currentSessionId, 'newSessionId');
-      expect(copied.uid, model.uid); // Unchanged fields
+      expect(copied.uid, model.uid);
     });
 
     test('should support Equatable equality', () {
@@ -90,12 +91,9 @@ void main() {
       'senderUid': 'user123',
       'timestamp': now.toIso8601String(),
       'type': 'text',
-      'iv': 'dGVzdF9pdg==', // base64 representation
-      'ciphertext': 'ZW5jcnlwdGVkX21lc3NhZ2U=', // base64 representation
-      'encryptedKeys': {
-        'user123': 'encKeyAliceB64',
-        'bob456': 'encKeyBobB64',
-      },
+      'iv': 'dGVzdF9pdg==',
+      'ciphertext': 'ZW5jcnlwdGVkX21lc3NhZ2U=',
+      'encryptedKeys': {'user123': 'encKeyAliceB64', 'bob456': 'encKeyBobB64'},
       'status': 'read',
       'deliveredAt': now.toIso8601String(),
       'readAt': now.toIso8601String(),
@@ -135,9 +133,7 @@ void main() {
         ..['type'] = 'image'
         ..['mediaUrl'] = 'https://example.com/media.enc'
         ..['mediaIv'] = 'mediaIvB64'
-        ..['mediaEncryptedKeys'] = {
-          'user123': 'mediaKeyAliceB64',
-        }
+        ..['mediaEncryptedKeys'] = {'user123': 'mediaKeyAliceB64'}
         ..['mediaSize'] = 1024
         ..['mediaMimeType'] = 'image/png'
         ..['mediaOriginalFilename'] = 'enc_photo.png'
@@ -147,7 +143,10 @@ void main() {
       expect(model.type, 'image');
       expect(model.mediaUrl, 'https://example.com/media.enc');
       expect(model.mediaIv, 'mediaIvB64');
-      expect(model.mediaEncryptedKeys, containsPair('user123', 'mediaKeyAliceB64'));
+      expect(
+        model.mediaEncryptedKeys,
+        containsPair('user123', 'mediaKeyAliceB64'),
+      );
       expect(model.mediaSize, 1024);
       expect(model.mediaMimeType, 'image/png');
       expect(model.mediaOriginalFilename, 'enc_photo.png');
@@ -174,7 +173,11 @@ void main() {
 
     test('should support copyWith', () {
       final model = MessageModel.fromJson(messageJson);
-      final copied = model.copyWith(status: 'delivered', readAt: () => null, isDeleted: true);
+      final copied = model.copyWith(
+        status: 'delivered',
+        readAt: () => null,
+        isDeleted: true,
+      );
 
       expect(copied.status, 'delivered');
       expect(copied.readAt, isNull);
@@ -195,16 +198,10 @@ void main() {
         'type': 'text',
         'iv': 'ivB64==',
         'ciphertext': 'previewTextB64',
-        'encryptedKeys': {
-          'user123': 'keyAlice',
-          'bob456': 'keyBob',
-        },
-        'status': 'sent'
+        'encryptedKeys': {'user123': 'keyAlice', 'bob456': 'keyBob'},
+        'status': 'sent',
       },
-      'unreadCount': {
-        'user123': 0,
-        'bob456': 2,
-      },
+      'unreadCount': {'user123': 0, 'bob456': 2},
       'mutedBy': ['bob456'],
       'deletedBy': <dynamic>[],
     };
@@ -242,7 +239,10 @@ void main() {
 
     test('should support copyWith', () {
       final model = ConversationModel.fromJson(conversationJson);
-      final copied = model.copyWith(unreadCount: {'user123': 1}, lastMessagePreview: () => null);
+      final copied = model.copyWith(
+        unreadCount: {'user123': 1},
+        lastMessagePreview: () => null,
+      );
 
       expect(copied.unreadCount, containsPair('user123', 1));
       expect(copied.lastMessagePreview, isNull);

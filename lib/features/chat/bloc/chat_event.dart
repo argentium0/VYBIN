@@ -19,7 +19,7 @@ class LoadMessages extends ChatEvent {
 
 class SendMessage extends ChatEvent {
   final String plaintext;
-  final String type; // 'text', 'image', 'voice', 'document'
+  final String type;
   final String senderUid;
   final String? mediaUrl;
   final int? durationMs;

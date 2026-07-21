@@ -11,7 +11,8 @@ class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
@@ -59,7 +60,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
           backgroundColor: VybinTheme.whatsappGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -72,7 +75,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
     context.read<AuthBloc>().add(CheckEmailVerificationRequested());
 
-    // We can reset checking state after a brief delay
     await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) {
       setState(() {
@@ -87,7 +89,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? VybinTheme.darkCharcoal : VybinTheme.lightBackground,
+      backgroundColor: isDark
+          ? VybinTheme.darkCharcoal
+          : VybinTheme.lightBackground,
       appBar: AppBar(
         title: const Text('Email Verification'),
         centerTitle: true,
@@ -107,48 +111,61 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 backgroundColor: VybinTheme.errorColor,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final email = state is AuthEmailUnverified ? state.user.email : 'your email';
+            final email = state is AuthEmailUnverified
+                ? state.user.email
+                : 'your email';
 
             return Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
                 child: Card(
-                  color: isDark ? VybinTheme.cardCharcoal : VybinTheme.lightCard,
+                  color: isDark
+                      ? VybinTheme.cardCharcoal
+                      : VybinTheme.lightCard,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 4,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 32.0,
+                      horizontal: 24.0,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Mail Icon Container
                         Center(
                           child: Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: (isDark ? VybinTheme.neonHighlight : VybinTheme.whatsappTeal)
-                                  .withValues(alpha: 0.1),
+                              color:
+                                  (isDark
+                                          ? VybinTheme.neonHighlight
+                                          : VybinTheme.whatsappTeal)
+                                      .withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.mark_email_unread_outlined,
                               size: 80,
-                              color: isDark ? VybinTheme.neonHighlight : VybinTheme.whatsappTeal,
+                              color: isDark
+                                  ? VybinTheme.neonHighlight
+                                  : VybinTheme.whatsappTeal,
                             ),
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // Headline
+
                         Text(
                           'Verify Your Identity',
                           textAlign: TextAlign.center,
@@ -158,13 +175,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Body Text
+
                         RichText(
                           textAlign: TextAlign.center,
                           text: TextSpan(
                             style: theme.textTheme.bodyLarge?.copyWith(
                               height: 1.5,
-                              color: isDark ? VybinTheme.primaryText : VybinTheme.lightPrimaryText,
+                              color: isDark
+                                  ? VybinTheme.primaryText
+                                  : VybinTheme.lightPrimaryText,
                             ),
                             children: [
                               const TextSpan(
@@ -178,17 +197,22 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                                 ),
                               ),
                               const TextSpan(
-                                text: '\n\nPlease verify your email to unlock end-to-end encrypted messaging features.',
+                                text:
+                                    '\n\nPlease verify your email to unlock end-to-end encrypted messaging features.',
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // Primary Verification Check Button
+
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? VybinTheme.neonHighlight : VybinTheme.whatsappTeal,
-                            foregroundColor: isDark ? VybinTheme.darkCharcoal : Colors.white,
+                            backgroundColor: isDark
+                                ? VybinTheme.neonHighlight
+                                : VybinTheme.whatsappTeal,
+                            foregroundColor: isDark
+                                ? VybinTheme.darkCharcoal
+                                : Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -202,7 +226,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : const Text(
@@ -214,9 +240,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                                 ),
                         ),
                         const SizedBox(height: 16),
-                        // Resend Verification Email Button
+
                         TextButton(
-                          onPressed: _cooldownSeconds > 0 ? null : _resendVerification,
+                          onPressed: _cooldownSeconds > 0
+                              ? null
+                              : _resendVerification,
                           child: Text(
                             _cooldownSeconds > 0
                                 ? 'Resend Verification Link ($_cooldownSeconds s)'
@@ -224,15 +252,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                             style: TextStyle(
                               color: _cooldownSeconds > 0
                                   ? VybinTheme.secondaryText
-                                  : (isDark ? VybinTheme.neonHighlight : VybinTheme.whatsappTeal),
+                                  : (isDark
+                                        ? VybinTheme.neonHighlight
+                                        : VybinTheme.whatsappTeal),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Divider
+
                         const Divider(height: 24),
-                        // Logout Text Button
+
                         TextButton(
                           onPressed: () {
                             context.read<AuthBloc>().add(LogoutRequested());

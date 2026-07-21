@@ -4,7 +4,6 @@ import 'package:vybin/app.dart';
 import 'package:vybin/features/auth/presentation/login_screen.dart';
 import 'package:vybin/shared/theme/vybin_theme.dart';
 
-/// Navigation action that completes onboarding and routes the user to the Login screen.
 Future<void> completeOnboarding(BuildContext context) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setBool('is_first_launch', false);
@@ -16,13 +15,11 @@ Future<void> completeOnboarding(BuildContext context) async {
     );
   }
 
-  // Allow the pushReplacement transition to complete before swapping the root MaterialApp builder
   Future.delayed(const Duration(milliseconds: 300), () {
     VybinApp.onboardingCompleteNotifier.value = true;
   });
 }
 
-/// Alias to support alternative naming conventions requested in specifications
 typedef StatefulOnboardingScreen = OnboardingScreen;
 
 class OnboardingScreen extends StatefulWidget {
@@ -32,7 +29,8 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   late AnimationController _animationController;
@@ -58,14 +56,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? VybinTheme.darkCharcoal : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF075E54);
-    final secondaryTextColor = isDark ? VybinTheme.secondaryText : Colors.grey[700]!;
+    final secondaryTextColor = isDark
+        ? VybinTheme.secondaryText
+        : Colors.grey[700]!;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Top-right corner Skip button (hidden on the final slide)
             SizedBox(
               height: 48,
               child: Align(
@@ -89,7 +88,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               ),
             ),
 
-            // Center PageView builder
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -107,11 +105,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const SizedBox(height: 10),
-                          // Visual element based on the current slide
+
                           _buildSlideVisual(index),
                           const SizedBox(height: 32),
 
-                          // Slide Title
                           Text(
                             _getSlideTitle(index),
                             style: TextStyle(
@@ -125,7 +122,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                           ),
                           const SizedBox(height: 12),
 
-                          // Slide Subtitle
                           Text(
                             _getSlideSubtitle(index),
                             style: TextStyle(
@@ -144,13 +140,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               ),
             ),
 
-            // Bottom Row: Dots indicators and button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32.0,
+                vertical: 16.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Smooth, animated dot indicators
                   Row(
                     children: List.generate(
                       3,
@@ -169,7 +166,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                     ),
                   ),
 
-                  // Floating Navigation Button
                   _currentPage == 2
                       ? AnimatedBuilder(
                           animation: _animationController,
@@ -179,9 +175,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: VybinTheme.whatsappGreen.withValues(alpha: 0.3 + 0.2 * _animationController.value),
-                                    blurRadius: 10 + 5 * _animationController.value,
-                                    spreadRadius: 1 + 2 * _animationController.value,
+                                    color: VybinTheme.whatsappGreen.withValues(
+                                      alpha:
+                                          0.3 +
+                                          0.2 * _animationController.value,
+                                    ),
+                                    blurRadius:
+                                        10 + 5 * _animationController.value,
+                                    spreadRadius:
+                                        1 + 2 * _animationController.value,
                                   ),
                                 ],
                               ),
@@ -193,7 +195,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                             style: ElevatedButton.styleFrom(
                               backgroundColor: VybinTheme.whatsappGreen,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -218,7 +223,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                           style: ElevatedButton.styleFrom(
                             backgroundColor: VybinTheme.whatsappGreen,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -243,7 +251,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
 
   Widget _buildSlideVisual(int index) {
     if (index == 0) {
-      // Slide 1: Padlock inside a circular ring with glowing accents
       return AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -254,7 +261,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               shape: BoxShape.circle,
               color: VybinTheme.whatsappGreen.withValues(alpha: 0.05),
               border: Border.all(
-                color: VybinTheme.whatsappGreen.withValues(alpha: 0.1 + 0.2 * _animationController.value),
+                color: VybinTheme.whatsappGreen.withValues(
+                  alpha: 0.1 + 0.2 * _animationController.value,
+                ),
                 width: 2 + 2 * _animationController.value,
               ),
             ),
@@ -268,7 +277,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         },
       );
     } else if (index == 1) {
-      // Slide 2: Two interconnected chat bubbles displaying cyphertext/encryption patterns
       return AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -301,7 +309,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         },
       );
     } else {
-      // Slide 3: Circular transparent logo.png alongside a neon rocket indicator or glowing verification badge
       return Container(
         width: 140,
         height: 140,
@@ -312,9 +319,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
             Container(
               width: 60.0,
               height: 60.0,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle),
               clipBehavior: Clip.hardEdge,
               child: Image.asset(
                 'assets/images/logo_dark.png',
@@ -337,7 +342,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                   child: Icon(
                     Icons.rocket_launch,
                     size: 56,
-                    color: Colors.orangeAccent.withValues(alpha: 0.8 + 0.2 * _animationController.value),
+                    color: Colors.orangeAccent.withValues(
+                      alpha: 0.8 + 0.2 * _animationController.value,
+                    ),
                   ),
                 );
               },

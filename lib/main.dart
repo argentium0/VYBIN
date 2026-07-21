@@ -17,11 +17,8 @@ import 'package:permission_handler/permission_handler.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  //print(" BREADCRUMB 1: Entering main()");
   WidgetsFlutterBinding.ensureInitialized();
-  //print(" BREADCRUMB 2: Flutter Binding complete");
 
-  // Override Flutter's default error widget to avoid Red Screen of Death
   ErrorWidget.builder = (FlutterErrorDetails details) {
     bool isRelease = const bool.fromEnvironment('dart.vm.product');
     return Directionality(
@@ -73,11 +70,12 @@ void main() async {
   await NotificationService.initialize();
   FirebaseMessaging.onBackgroundMessage(anonymizedBackgroundMessageHandler);
 
-  // Request push notification permissions
   try {
     await Permission.notification.request();
   } catch (e) {
-    debugPrint('Error requesting permission_handler notification permission: $e');
+    debugPrint(
+      'Error requesting permission_handler notification permission: $e',
+    );
   }
 
   final messaging = FirebaseMessaging.instance;
@@ -95,7 +93,6 @@ void main() async {
     debugPrint('Error requesting notification permission: $e');
   }
 
-  // Listen to auth state changes to save FCM token to current user's Firestore document
   FirebaseAuth.instance.authStateChanges().listen((user) async {
     if (user != null) {
       try {
@@ -112,7 +109,6 @@ void main() async {
     }
   });
 
-  // Listen to token refreshes to keep Firestore updated
   FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -125,13 +121,6 @@ void main() async {
       }
     }
   });
-
-  //print(" BREADCRUMB 3: Firebase initialized");
-
-  // ( Zego init)
-  //print(" BREADCRUMB 4: Starting Zego Init...");
-  // await ZegoUIKitPrebuiltCallInvitationService().init(...)
-  //print(" BREADCRUMB 5: Zego Init Complete!");
 
   final prefs = await SharedPreferences.getInstance();
   final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
@@ -152,5 +141,4 @@ void main() async {
       ),
     ),
   );
-  //print(" BREADCRUMB 6: runApp executed");
 }

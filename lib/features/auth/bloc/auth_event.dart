@@ -13,10 +13,7 @@ class LoginRequested extends AuthEvent {
   final String email;
   final String password;
 
-  const LoginRequested({
-    required this.email,
-    required this.password,
-  });
+  const LoginRequested({required this.email, required this.password});
 
   @override
   List<Object?> get props => [email, password];
@@ -38,7 +35,13 @@ class SignUpRequested extends AuthEvent {
   });
 
   @override
-  List<Object?> get props => [displayName, username, email, password, localPhotoPath];
+  List<Object?> get props => [
+    displayName,
+    username,
+    email,
+    password,
+    localPhotoPath,
+  ];
 }
 
 class LogoutRequested extends AuthEvent {

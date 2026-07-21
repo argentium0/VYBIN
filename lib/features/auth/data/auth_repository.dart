@@ -33,7 +33,6 @@ class AuthRepository {
 
   EncryptionService get encryptionService => _encryptionService;
 
-  /// Gets the currently authenticated user's profile from Firestore (if logged in).
   Future<UserModel?> getCurrentUser() async {
     final fbUser = _firebaseAuth.currentUser;
     if (fbUser == null) return null;
@@ -43,7 +42,6 @@ class AuthRepository {
 
     final user = UserModel.fromJson(doc.data()!);
 
-    // Load raw private key from secure storage if available
     final rawJson = await _secureKeyStorage.readRawPrivateKey();
     if (rawJson != null) {
       final privKey = _encryptionService.deserializePrivateKey(rawJson);
@@ -56,13 +54,11 @@ class AuthRepository {
     return user;
   }
 
-  /// Logs in an existing user and loads their E2EE private key.
   Future<UserModel> login({
     required String email,
     required String password,
   }) async {
     try {
-      // 1. Authenticate with Firebase Auth
       final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -72,31 +68,40 @@ class AuthRepository {
         throw Exception('User authentication failed.');
       }
 
-      // 2. Fetch user profile from Firestore
-      final userDoc = await _firestore.collection('users').doc(fbUser.uid).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(fbUser.uid)
+          .get();
       if (!userDoc.exists) {
         throw Exception('User profile not found in database.');
       }
 
       final user = UserModel.fromJson(userDoc.data()!);
 
-      // 3. Re-derive AES key and decrypt private key
-      final hasRawKey = await _encryptionService.hasValidLocalPrivateKey(user.publicKey);
+      final hasRawKey = await _encryptionService.hasValidLocalPrivateKey(
+        user.publicKey,
+      );
       if (hasRawKey) {
         final rawJson = await _secureKeyStorage.readRawPrivateKey();
         if (rawJson != null) {
           final privKey = _encryptionService.deserializePrivateKey(rawJson);
-          final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+          final pubKey = _encryptionService.decodePublicKeyFromPem(
+            user.publicKey,
+          );
           _encryptionService.loadKeyPair(
             AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
           );
-          
+
           await _firestore.collection('users').doc(fbUser.uid).update({
             'onlineStatus': 'online',
             'isOnline': true,
             'lastSeen': DateTime.now().toIso8601String(),
           });
-          return user.copyWith(onlineStatus: 'online', isOnline: true, lastSeen: DateTime.now());
+          return user.copyWith(
+            onlineStatus: 'online',
+            isOnline: true,
+            lastSeen: DateTime.now(),
+          );
         }
       }
 
@@ -104,7 +109,8 @@ class AuthRepository {
         password,
         fbUser.uid,
       );
-      final encryptedPrivKey = await _secureKeyStorage.readEncryptedPrivateKey();
+      final encryptedPrivKey = await _secureKeyStorage
+          .readEncryptedPrivateKey();
       if (encryptedPrivKey == null) {
         throw IdentityKeyMissingException(user: user, password: password);
       }
@@ -114,32 +120,35 @@ class AuthRepository {
           encryptedPrivKey,
           derivedKey,
         );
-        final pubKey = _encryptionService.decodePublicKeyFromPem(user.publicKey);
+        final pubKey = _encryptionService.decodePublicKeyFromPem(
+          user.publicKey,
+        );
 
         if (privKey.modulus != pubKey.modulus) {
           throw IdentityKeyMissingException(user: user, password: password);
         }
 
-        // Load key pair into memory
         _encryptionService.loadKeyPair(
           AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
         );
 
-        // Save raw private key locally for background processing & startup
         final rawJson = _encryptionService.serializePrivateKey(privKey);
         await _secureKeyStorage.writeRawPrivateKey(rawJson);
       } catch (_) {
         throw IdentityKeyMissingException(user: user, password: password);
       }
 
-      // 4. Update online status in Firestore
       await _firestore.collection('users').doc(fbUser.uid).update({
         'onlineStatus': 'online',
         'isOnline': true,
         'lastSeen': DateTime.now().toIso8601String(),
       });
 
-      return user.copyWith(onlineStatus: 'online', isOnline: true, lastSeen: DateTime.now());
+      return user.copyWith(
+        onlineStatus: 'online',
+        isOnline: true,
+        lastSeen: DateTime.now(),
+      );
     } on fb.FirebaseAuthException catch (e) {
       if (e.code == 'network-request-failed') {
         throw NetworkException();
@@ -158,7 +167,6 @@ class AuthRepository {
     try {
       final sanitizedUsername = username.trim().toLowerCase();
 
-      // 1. Pre-check if the username is already taken
       final usernameDoc = await _firestore
           .collection('usernames')
           .doc(sanitizedUsername)
@@ -167,7 +175,6 @@ class AuthRepository {
         throw Exception('Username already taken. Please choose another one.');
       }
 
-      // 2. Create the Firebase Auth account
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -181,7 +188,6 @@ class AuthRepository {
       await createdFbUser.sendEmailVerification();
 
       try {
-        // Upload profile image immediately after Firebase Auth user is created if selected
         String? downloadUrl;
         if (localPhotoPath != null) {
           try {
@@ -196,10 +202,8 @@ class AuthRepository {
           }
         }
 
-        // 3. Generate RSA-2048 key pair
         final keyPair = await _encryptionService.generateKeyPair();
 
-        // 4. Derive key and encrypt private key
         final derivedKey = _encryptionService.deriveKeyFromPassword(
           password,
           createdFbUser.uid,
@@ -209,29 +213,26 @@ class AuthRepository {
           derivedKey,
         );
 
-        // Save encrypted private key locally
         await _secureKeyStorage.writeEncryptedPrivateKey(encryptedPrivateKey);
-        final rawJson = _encryptionService.serializePrivateKey(keyPair.privateKey);
+        final rawJson = _encryptionService.serializePrivateKey(
+          keyPair.privateKey,
+        );
         await _secureKeyStorage.writeRawPrivateKey(rawJson);
 
-        // Serialize public key to PEM string
         final publicKeyPem = _encryptionService.encodePublicKeyToPem(
           keyPair.publicKey,
         );
 
-        // Generate and save newSessionId locally
         final newSessionId = const Uuid().v4();
         await _secureKeyStorage.writeLocalSessionId(newSessionId);
 
-        // 5. Write to Firestore in a transaction to ensure atomic username check and registration
         final user = UserModel(
           uid: createdFbUser.uid,
           username: sanitizedUsername,
           displayName: displayName,
           email: email,
           publicKey: publicKeyPem,
-          onlineStatus:
-              'offline', // Default state on register is offline until they log in or session triggers online
+          onlineStatus: 'offline',
           isOnline: false,
           lastSeen: DateTime.now(),
           about: 'Hey there! I am using VYBIN',
@@ -247,7 +248,9 @@ class AuthRepository {
               .doc(sanitizedUsername);
           final usernameSnap = await transaction.get(usernameRef);
           if (usernameSnap.exists) {
-            throw Exception('Username already taken. Please choose another one.');
+            throw Exception(
+              'Username already taken. Please choose another one.',
+            );
           }
 
           final userRef = _firestore.collection('users').doc(createdFbUser.uid);
@@ -259,20 +262,15 @@ class AuthRepository {
           transaction.set(usernameRef, {'uid': createdFbUser.uid});
         });
 
-        // Load key pair into memory immediately since registration succeeded
         _encryptionService.loadKeyPair(keyPair);
 
-        // Inject educational welcome system message from VYBIN Team
         await _injectWelcomeMessage(user);
 
         return user;
       } catch (e) {
-        // Clean up Firebase Auth user if Firestore registration fails
         try {
           await createdFbUser.delete();
-        } catch (_) {
-          // Ignore auth deletion errors if it fails
-        }
+        } catch (_) {}
         rethrow;
       }
     } on fb.FirebaseAuthException catch (e) {
@@ -283,7 +281,6 @@ class AuthRepository {
     }
   }
 
-  /// Sends an email verification to the currently logged in user
   Future<void> sendEmailVerification() async {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
@@ -298,7 +295,6 @@ class AuthRepository {
     }
   }
 
-  /// Reloads the current user profile from Firebase Auth
   Future<void> reloadUser() async {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
@@ -313,13 +309,11 @@ class AuthRepository {
     }
   }
 
-  /// Checks if the current firebase user's email is verified
   bool isEmailVerified() {
     final user = _firebaseAuth.currentUser;
     return user?.emailVerified ?? false;
   }
 
-  /// Logs out the user and clears in-memory keys
   Future<void> logout({bool eraseDeviceData = false}) async {
     final fbUser = _firebaseAuth.currentUser;
     if (fbUser != null) {
@@ -329,9 +323,7 @@ class AuthRepository {
           'isOnline': false,
           'lastSeen': DateTime.now().toIso8601String(),
         });
-      } catch (_) {
-        // Ignore if network is offline
-      }
+      } catch (_) {}
     }
 
     _encryptionService.clearPrivateKey();
@@ -343,13 +335,11 @@ class AuthRepository {
     await _firebaseAuth.signOut();
   }
 
-  /// Compresses a photo and uploads it to Firebase Storage under `users/{uid}/profile_picture.jpg`.
   Future<String> uploadProfilePhoto({
     required String uid,
     required String localPath,
     String? existingPhotoUrl,
   }) async {
-    // Stub or bypass if running in unit tests where Firebase is not initialized
     if (Firebase.apps.isEmpty) {
       return 'https://example.com/mock_profile_photo.jpg';
     }
@@ -358,7 +348,6 @@ class AuthRepository {
     final tempDir = await getTemporaryDirectory();
     final targetPath = '${tempDir.path}/profile_${uid}_compressed.jpg';
 
-    // Compress using flutter_image_compress
     final compressedFile = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,
       targetPath,
@@ -370,10 +359,11 @@ class AuthRepository {
       throw Exception('Failed to compress profile photo');
     }
 
-    // Upload to Cloudinary
     final mediaService = MediaService();
     try {
-      final downloadUrl = await mediaService.uploadToCloudinary(File(compressedFile.path));
+      final downloadUrl = await mediaService.uploadToCloudinary(
+        File(compressedFile.path),
+      );
       if (downloadUrl == null) {
         throw Exception('Failed to upload profile photo to Cloudinary');
       }
@@ -383,24 +373,27 @@ class AuthRepository {
     }
   }
 
-  /// Compresses and uploads a profile image file for the currently authenticated user.
-  /// Overwrites the existing profile picture at `users/{uid}/profile_picture.jpg` and returns the download URL.
   Future<String> uploadProfileImage(File imageFile) async {
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
       throw Exception('No authenticated user found for profile image upload.');
     }
-    
+
     String? existingPhotoUrl;
     try {
-      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
       if (userDoc.exists) {
-        existingPhotoUrl = userDoc.data()?['photoUrl'] ?? userDoc.data()?['profilePhotoUrl'] as String?;
+        existingPhotoUrl =
+            userDoc.data()?['photoUrl'] ??
+            userDoc.data()?['profilePhotoUrl'] as String?;
       }
     } catch (_) {
       existingPhotoUrl = currentUser.photoURL;
     }
-    
+
     try {
       return await uploadProfilePhoto(
         uid: currentUser.uid,
@@ -412,14 +405,12 @@ class AuthRepository {
     }
   }
 
-  /// Updates the user's display name, about section, and optional profile photo URL in Firestore and Firebase Auth.
   Future<UserModel> updateProfile({
     required String uid,
     required String displayName,
     required String about,
     String? profilePhotoUrl,
   }) async {
-    // 1. Update Firebase Auth currentUser details if available
     try {
       final user = _firebaseAuth.currentUser;
       if (user != null) {
@@ -438,7 +429,7 @@ class AuthRepository {
     };
     if (profilePhotoUrl != null) {
       updates['profilePhotoUrl'] = profilePhotoUrl;
-      updates['photoUrl'] = profilePhotoUrl; // Write photoUrl for consistency
+      updates['photoUrl'] = profilePhotoUrl;
     }
 
     await _firestore
@@ -446,19 +437,16 @@ class AuthRepository {
         .doc(uid)
         .set(updates, SetOptions(merge: true));
 
-    // Retrieve and return updated model
     final updatedDoc = await _firestore.collection('users').doc(uid).get();
     return UserModel.fromJson(updatedDoc.data()!);
   }
 
-  /// Deletes the user account from Auth and Firestore, deleting the user profile and username mapping.
   Future<void> deleteAccount() async {
     final user = _firebaseAuth.currentUser;
     if (user == null) return;
 
     final uid = user.uid;
 
-    // Fetch username to delete it from usernames collection
     final userDoc = await _firestore.collection('users').doc(uid).get();
     final username = userDoc.data()?['username'] as String?;
 
@@ -471,14 +459,12 @@ class AuthRepository {
     await batch.commit();
     await user.delete();
 
-    // Clean up local keys
     _encryptionService.clearPrivateKey();
     await _secureKeyStorage.deleteRawPrivateKey();
     await _secureKeyStorage.deleteEncryptedPrivateKey();
     await _secureKeyStorage.deleteLocalSessionId();
   }
 
-  /// Re-authenticates, changes the Firebase password, and re-encrypts the local cryptographic vault.
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -488,7 +474,6 @@ class AuthRepository {
       throw Exception('No authenticated user found.');
     }
 
-    // 1. Re-authenticate using the validated current password.
     final credential = fb.EmailAuthProvider.credential(
       email: currentUser.email!,
       password: currentPassword,
@@ -505,9 +490,8 @@ class AuthRepository {
 
     RSAPrivateKey? temporaryPrivateKey;
     try {
-      // 3. Vault Re-encryption Sequence
-      // a. Decrypt local private key
-      final encryptedPrivateKeyBase64 = await _secureKeyStorage.readEncryptedPrivateKey();
+      final encryptedPrivateKeyBase64 = await _secureKeyStorage
+          .readEncryptedPrivateKey();
       if (encryptedPrivateKeyBase64 == null) {
         throw Exception('Cryptographic vault not found locally.');
       }
@@ -522,7 +506,6 @@ class AuthRepository {
         currentDerivedKey,
       );
 
-      // b. Update password in Firebase Auth
       try {
         await currentUser.updatePassword(newPassword);
       } on fb.FirebaseAuthException catch (e) {
@@ -532,7 +515,6 @@ class AuthRepository {
         rethrow;
       }
 
-      // c. Re-derive key with new password, encrypt, and save to secure storage
       final newDerivedKey = _encryptionService.deriveKeyFromPassword(
         newPassword,
         currentUser.uid,
@@ -543,28 +525,27 @@ class AuthRepository {
         newDerivedKey,
       );
 
-      await _secureKeyStorage.writeEncryptedPrivateKey(newEncryptedPrivateKeyBase64);
+      await _secureKeyStorage.writeEncryptedPrivateKey(
+        newEncryptedPrivateKeyBase64,
+      );
     } finally {
-      // d. Wipe the plain text key from temporary memory variables
       temporaryPrivateKey = null;
     }
   }
 
-  /// Completes the login process by saving and loading the private key.
   Future<UserModel> completeLoginWithPrivateKey({
     required UserModel user,
     required String password,
     required String encryptedPrivateKey,
   }) async {
-    // Sanitize the pasted blob to remove any formatting/newlines/whitespace
-    final sanitizedBlob = encryptedPrivateKey.replaceAll(RegExp(r'\s+'), '').trim();
+    final sanitizedBlob = encryptedPrivateKey
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
     final newSessionId = const Uuid().v4();
 
     try {
-      // 1. Save the encrypted private key to secure storage
       await _secureKeyStorage.writeEncryptedPrivateKey(sanitizedBlob);
 
-      // 2. Re-derive AES key and decrypt private key
       final derivedKey = _encryptionService.deriveKeyFromPassword(
         password,
         user.uid,
@@ -580,16 +561,13 @@ class AuthRepository {
         throw const FormatException('Private key modulus mismatch');
       }
 
-      // Load key pair into memory
       _encryptionService.loadKeyPair(
         AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey>(pubKey, privKey),
       );
 
-      // Save raw private key locally for background processing & startup
       final rawJson = _encryptionService.serializePrivateKey(privKey);
       await _secureKeyStorage.writeRawPrivateKey(rawJson);
 
-      // Save the generated session ID locally to secure storage
       await _secureKeyStorage.writeLocalSessionId(newSessionId);
     } catch (e) {
       throw Exception(
@@ -597,7 +575,6 @@ class AuthRepository {
       );
     }
 
-    // 3. Update online status and session ID in Firestore
     await _firestore.collection('users').doc(user.uid).update({
       'onlineStatus': 'online',
       'isOnline': true,
@@ -613,10 +590,13 @@ class AuthRepository {
     );
   }
 
-  /// Listens to real-time session updates from Firestore user document.
-  /// If cloud session ID does not match local session ID, triggers logout and calls callback.
-  StreamSubscription listenToSessionChanges(String userId, VoidCallback onSessionMismatch) {
-    return _firestore.collection('users').doc(userId).snapshots().listen((snapshot) async {
+  StreamSubscription listenToSessionChanges(
+    String userId,
+    VoidCallback onSessionMismatch,
+  ) {
+    return _firestore.collection('users').doc(userId).snapshots().listen((
+      snapshot,
+    ) async {
       if (!snapshot.exists) return;
       final data = snapshot.data();
       if (data == null) return;
@@ -634,7 +614,6 @@ class AuthRepository {
       final sortedUids = [user.uid, 'vybin_team']..sort();
       final conversationId = sortedUids.join('_');
 
-      // 1. Ensure the "VYBIN Team" user exists in Firestore
       final vybinTeamRef = _firestore.collection('users').doc('vybin_team');
       final vybinTeamSnap = await vybinTeamRef.get();
       if (!vybinTeamSnap.exists) {
@@ -643,7 +622,7 @@ class AuthRepository {
           'displayName': 'VYBIN Team',
           'username': 'vybin_team',
           'email': 'team@vybin.internal',
-          'publicKey': user.publicKey, // Use user's public key as dummy PEM
+          'publicKey': user.publicKey,
           'onlineStatus': 'online',
           'isOnline': true,
           'lastSeen': DateTime.now().toIso8601String(),
@@ -651,20 +630,18 @@ class AuthRepository {
           'createdAt': DateTime.now().toIso8601String(),
           'blockedUids': const <String>[],
         });
-        
+
         await _firestore.collection('usernames').doc('vybin_team').set({
-          'uid': 'vybin_team'
+          'uid': 'vybin_team',
         });
       }
 
-      // 2. Create the conversation document if not exists
-      final convRef = _firestore.collection('conversations').doc(conversationId);
+      final convRef = _firestore
+          .collection('conversations')
+          .doc(conversationId);
       final convSnap = await convRef.get();
       if (!convSnap.exists) {
-        final unreadMap = {
-          user.uid: 0,
-          'vybin_team': 0,
-        };
+        final unreadMap = {user.uid: 0, 'vybin_team': 0};
         await convRef.set({
           'conversationId': conversationId,
           'participantUids': [user.uid, 'vybin_team'],
@@ -677,7 +654,6 @@ class AuthRepository {
         });
       }
 
-      // 3. Encrypt the welcome message using user's public key
       const welcomeText =
           "Welcome to VYBIN! Because your privacy is our priority, this app uses strict End-to-End Encryption. Your access keys are locked entirely to this physical phone. If you ever plan to switch devices, you MUST go to Settings > Account > Export Cryptographic Identity and save your backup blob somewhere safe. Without it, your history cannot be recovered on a new device.";
 
@@ -686,10 +662,9 @@ class AuthRepository {
         recipientUid: user.uid,
         recipientPubKeyPEM: user.publicKey,
         senderUid: 'vybin_team',
-        senderPubKeyPEM: user.publicKey, // Use user's public key as dummy PEM
+        senderPubKeyPEM: user.publicKey,
       );
 
-      // 4. Create and save the message
       final messagesRef = _firestore
           .collection('conversations')
           .doc(conversationId)
@@ -705,7 +680,9 @@ class AuthRepository {
         type: 'text',
         iv: encryptedData['iv'] as String,
         ciphertext: encryptedData['ciphertext'] as String,
-        encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+        encryptedKeys: Map<String, String>.from(
+          encryptedData['encryptedKeys'] as Map,
+        ),
         status: 'sent',
         deletedFor: const [],
         deletedForEveryone: false,
@@ -716,7 +693,9 @@ class AuthRepository {
         type: 'text',
         iv: encryptedData['iv'] as String,
         ciphertext: encryptedData['ciphertext'] as String,
-        encryptedKeys: Map<String, String>.from(encryptedData['encryptedKeys'] as Map),
+        encryptedKeys: Map<String, String>.from(
+          encryptedData['encryptedKeys'] as Map,
+        ),
         status: 'sent',
       );
 
@@ -730,7 +709,6 @@ class AuthRepository {
 
       await batch.commit();
     } catch (e) {
-      // Print/log and allow signup to complete even if welcome message injection fails
       debugPrint('Error injecting welcome message: $e');
     }
   }
@@ -743,12 +721,16 @@ class IdentityKeyMissingException implements Exception {
   IdentityKeyMissingException({required this.user, required this.password});
 
   @override
-  String toString() => 'Cryptographic identity key missing from secure storage.';
+  String toString() =>
+      'Cryptographic identity key missing from secure storage.';
 }
 
 class NetworkException implements Exception {
   final String message;
-  NetworkException([this.message = 'Network error. Please check your internet connection and try again.']);
+  NetworkException([
+    this.message =
+        'Network error. Please check your internet connection and try again.',
+  ]);
 
   @override
   String toString() => message;

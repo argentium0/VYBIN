@@ -8,8 +8,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
 
   AuthBloc({AuthRepository? authRepository})
-      : _authRepository = authRepository ?? AuthRepository(),
-        super(AuthInitial()) {
+    : _authRepository = authRepository ?? AuthRepository(),
+      super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<LoginRequested>(_onLoginRequested);
     on<SignUpRequested>(_onSignUpRequested);
@@ -28,7 +28,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
-        final hasKey = await _authRepository.encryptionService.hasValidLocalPrivateKey(user.publicKey);
+        final hasKey = await _authRepository.encryptionService
+            .hasValidLocalPrivateKey(user.publicKey);
         if (!hasKey) {
           emit(AuthUnauthenticated());
           return;
@@ -57,7 +58,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
-      final hasKey = await _authRepository.encryptionService.hasValidLocalPrivateKey(user.publicKey);
+      final hasKey = await _authRepository.encryptionService
+          .hasValidLocalPrivateKey(user.publicKey);
       if (!hasKey) {
         emit(AuthNeedsMigrationState(user: user, password: event.password));
         return;
@@ -126,25 +128,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             _startSessionListener(user.uid);
             emit(AuthAuthenticated(user));
           } else {
-            emit(AuthEmailUnverified(
-              currentState.user,
-              verificationError: 'User profile not found in database.',
-              timestamp: DateTime.now().millisecondsSinceEpoch,
-            ));
+            emit(
+              AuthEmailUnverified(
+                currentState.user,
+                verificationError: 'User profile not found in database.',
+                timestamp: DateTime.now().millisecondsSinceEpoch,
+              ),
+            );
           }
         } else {
-          emit(AuthEmailUnverified(
-            currentState.user,
-            verificationError: 'Email verification is still pending. Please check your inbox.',
-            timestamp: DateTime.now().millisecondsSinceEpoch,
-          ));
+          emit(
+            AuthEmailUnverified(
+              currentState.user,
+              verificationError:
+                  'Email verification is still pending. Please check your inbox.',
+              timestamp: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
         }
       } catch (e) {
-        emit(AuthEmailUnverified(
-          currentState.user,
-          verificationError: e.toString().replaceAll('Exception: ', ''),
-          timestamp: DateTime.now().millisecondsSinceEpoch,
-        ));
+        emit(
+          AuthEmailUnverified(
+            currentState.user,
+            verificationError: e.toString().replaceAll('Exception: ', ''),
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
       }
     }
   }
@@ -158,11 +167,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         await _authRepository.sendEmailVerification();
       } catch (e) {
-        emit(AuthEmailUnverified(
-          currentState.user,
-          verificationError: e.toString().replaceAll('Exception: ', ''),
-          timestamp: DateTime.now().millisecondsSinceEpoch,
-        ));
+        emit(
+          AuthEmailUnverified(
+            currentState.user,
+            verificationError: e.toString().replaceAll('Exception: ', ''),
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
       }
     }
   }
@@ -223,14 +234,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final currentState = state;
-    if (currentState is AuthRequiresIdentityImport || currentState is AuthNeedsMigrationState) {
+    if (currentState is AuthRequiresIdentityImport ||
+        currentState is AuthNeedsMigrationState) {
       emit(AuthLoading());
       try {
-        final user = currentState is AuthRequiresIdentityImport 
-            ? currentState.user 
+        final user = currentState is AuthRequiresIdentityImport
+            ? currentState.user
             : (currentState as AuthNeedsMigrationState).user;
-        final password = currentState is AuthRequiresIdentityImport 
-            ? currentState.password 
+        final password = currentState is AuthRequiresIdentityImport
+            ? currentState.password
             : (currentState as AuthNeedsMigrationState).password;
 
         final updatedUser = await _authRepository.completeLoginWithPrivateKey(
@@ -250,7 +262,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(currentState);
       } catch (e) {
         emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-        // Restore previous state so user can re-attempt pasting/editing
+
         emit(currentState);
       }
     }
@@ -284,12 +296,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _startSessionListener(String userId) {
     _sessionSubscription?.cancel();
-    _sessionSubscription = _authRepository.listenToSessionChanges(
-      userId,
-      () {
-        add(SessionMismatchDetected());
-      },
-    );
+    _sessionSubscription = _authRepository.listenToSessionChanges(userId, () {
+      add(SessionMismatchDetected());
+    });
   }
 
   void _cancelSessionListener() {
@@ -302,9 +311,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     _cancelSessionListener();
-    emit(const AuthLoggedOutState(
-      "You have been logged out because your account was accessed from a new device.",
-    ));
+    emit(
+      const AuthLoggedOutState(
+        "You have been logged out because your account was accessed from a new device.",
+      ),
+    );
   }
 
   @override

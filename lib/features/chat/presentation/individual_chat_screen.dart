@@ -50,7 +50,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   late final String _currentUserId;
   late final String otherUid;
 
-  // Audio recording local states
   bool _isRecording = false;
   bool _isRecordingLocked = false;
   int _recordingDuration = 0;
@@ -59,7 +58,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   bool showEmojiPicker = false;
   final FocusNode textFocusNode = FocusNode();
 
-  // Drag coordinates for cancel/lock
   double _dragDy = 0.0;
   double _dragDx = 0.0;
 
@@ -459,7 +457,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   @override
   Widget build(BuildContext context) {
     final contactId = otherUid;
-    // ignore: avoid_print
+
     print('Zego Button Built for: $contactId');
     return BlocProvider.value(
       value: _chatBloc,
@@ -608,16 +606,10 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                         isVideoCall: false,
                         resourceID: 'vybin_call_resource',
                         invitees: [
-                          ZegoUIKitUser(
-                            id: contactId,
-                            name: contactName,
-                          ),
+                          ZegoUIKitUser(id: contactId, name: contactName),
                         ],
                         icon: ButtonIcon(
-                          icon: const Icon(
-                            Icons.phone,
-                            color: Colors.white,
-                          ),
+                          icon: const Icon(Icons.phone, color: Colors.white),
                         ),
                         iconSize: const Size(24, 24),
                         buttonSize: const Size(40, 40),
@@ -629,7 +621,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                               ),
                             ),
                           );
-                          // Return true to tell Zego to continue with the call
+
                           return true;
                         },
                       ),
@@ -773,16 +765,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                   ),
               ],
             ),
-            // floatingActionButton: FloatingActionButton(
-            //   backgroundColor: Colors.red,
-            //   onPressed: () {
-            //     print("🚨 EMERGENCY BUTTON TAPPED!");
-            //     ScaffoldMessenger.of(context).showSnackBar(
-            //       SnackBar(content: Text("BUTTON IS ALIVE!"))
-            //     );
-            //   },
-            //   child: Icon(Icons.touch_app),
-            // ),
           ),
         ),
       ),
@@ -790,8 +772,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
   }
 
   Widget _buildCallLogBubble(Message message, bool isMe) {
-    final status = message.status; // 'missed' | 'declined' | 'completed'
-    
+    final status = message.status;
+
     IconData iconData;
     Color iconColor;
     String text;
@@ -835,11 +817,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              iconData,
-              color: iconColor,
-              size: 16,
-            ),
+            Icon(iconData, color: iconColor, size: 16),
             const SizedBox(width: 8),
             Text(
               text,
@@ -1416,7 +1394,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen>
                             content: Text('${widget.contactName} blocked.'),
                           ),
                         );
-                        context.pop(); // Go back to chat list
+                        context.pop();
                       }
                     } catch (e) {
                       if (context.mounted) {
@@ -2133,7 +2111,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         '${tempDir.path}/decrypted_${messageId}_$filename',
       );
 
-      // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
         final bytes = await cacheFile.readAsBytes();
         if (mounted) {
@@ -2144,7 +2121,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         return;
       }
 
-      // 2. Download encrypted bytes
       if (mounted) {
         setState(() {
           _isLoading = true;
@@ -2163,7 +2139,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         (a, b) => a..addAll(b),
       );
 
-      // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
       final myKey = encryptedKeys[widget.currentUserId];
       if (myKey == null) {
@@ -2175,7 +2150,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         throw Exception('Missing IV');
       }
 
-      // 4. Decrypt in memory
       if (!mounted) return;
       final chatRepo = context.read<ChatRepository>();
       final decrypted = chatRepo.decryptMediaBytes(
@@ -2184,7 +2158,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         encryptedKey: myKey,
       );
 
-      // Write to local cache
       await cacheFile.writeAsBytes(decrypted);
 
       if (mounted) {
@@ -2395,7 +2368,6 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         '${tempDir.path}/decrypted_${messageId}_$filename',
       );
 
-      // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
         if (mounted) {
           setState(() {
@@ -2405,7 +2377,6 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         return;
       }
 
-      // 2. Download encrypted bytes
       if (mounted) {
         setState(() {
           _isLoading = true;
@@ -2424,7 +2395,6 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         (a, b) => a..addAll(b),
       );
 
-      // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
       final myKey = encryptedKeys[widget.currentUserId];
       if (myKey == null) {
@@ -2436,7 +2406,6 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         throw Exception('Missing IV');
       }
 
-      // 4. Decrypt in memory
       if (!mounted) return;
       final chatRepo = context.read<ChatRepository>();
       final decrypted = chatRepo.decryptMediaBytes(
@@ -2445,7 +2414,6 @@ class _DocumentMessageBubbleState extends State<DocumentMessageBubble> {
         encryptedKey: myKey,
       );
 
-      // Write to local cache
       await cacheFile.writeAsBytes(decrypted);
 
       if (mounted) {
@@ -2706,7 +2674,6 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         '${tempDir.path}/decrypted_${messageId}_$filename',
       );
 
-      // 1. Check if the file exists in the local cache
       if (await cacheFile.exists()) {
         if (mounted) {
           setState(() {
@@ -2716,7 +2683,6 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         return;
       }
 
-      // 2. Download encrypted bytes
       if (mounted) {
         setState(() {
           _isLoading = true;
@@ -2735,7 +2701,6 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         (a, b) => a..addAll(b),
       );
 
-      // 3. Retrieve wrapped AES key
       final encryptedKeys = widget.message.mediaEncryptedKeys ?? {};
       final myKey = encryptedKeys[widget.currentUserId];
       if (myKey == null) {
@@ -2747,7 +2712,6 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         throw Exception('Missing IV');
       }
 
-      // 4. Decrypt in memory
       if (!mounted) return;
       final chatRepo = context.read<ChatRepository>();
       final decrypted = chatRepo.decryptMediaBytes(
@@ -2756,7 +2720,6 @@ class _VideoMessageBubbleState extends State<VideoMessageBubble> {
         encryptedKey: myKey,
       );
 
-      // Write to local cache
       await cacheFile.writeAsBytes(decrypted);
 
       if (mounted) {

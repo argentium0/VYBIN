@@ -27,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Email validation helper
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Email is required';
@@ -39,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
-  // Password validation helper
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Password is required';
@@ -68,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            // Contextual Snackbar on auth failure
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -120,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           } else if (state is AuthAuthenticated) {
-            // Contextual AlertDialog popup on simulated success
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -182,8 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: const Text('Enter VYBIN'),
                       onPressed: () {
-                        Navigator.of(context).pop(); // dismiss dialog
-                        context.go('/chats'); // route to chats
+                        Navigator.of(context).pop();
+                        context.go('/chats');
                       },
                     ),
                   ],
@@ -207,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 48),
-                    // Top 1/3: Logo & Tagline (Spec 9.2)
+
                     Center(
                       child: Column(
                         children: [
@@ -254,7 +250,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 64),
 
-                    // Middle: Input Fields
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -303,7 +298,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: _validatePassword,
                     ),
 
-                    // Forgot Password Link
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -321,7 +315,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Log In Button (Spec 9.2)
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: VybinTheme.whatsappGreen,
@@ -352,7 +345,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Divider with "OR" (Spec 9.2)
                     const Row(
                       children: [
                         Expanded(
@@ -382,7 +374,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // "Create Account" link (centered, teal color) (Spec 9.2)
                     Center(
                       child: GestureDetector(
                         onTap: isLoading ? null : () => context.push('/signup'),
@@ -398,7 +389,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    // Bottom encryption note
                     const Center(
                       child: Text(
                         'Your messages are end-to-end encrypted 🔒',
